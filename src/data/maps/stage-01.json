@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/stage.schema.json",
+  "id": "stage-01",
+  "title": "Formation Break",
+  "description": "첫 전투. swap과 협공을 익히는 기본 스테이지.",
+  "objective": "적 2기를 모두 쓰러뜨린다.",
+  "background_path": "src/data/assets/BattleStage01.png",
+  "image_area": {
+    "x": 0,
+    "y": 0,
+    "w": 512,
+    "h": 512
+  },
+  "width": 8,
+  "height": 8,
+  "terrain": [
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "hazard", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "wall", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"]
+  ],
+  "units": [
+    { "unitId": "ally-left", "x": 1, "y": 3 },
+    { "unitId": "ally-right", "x": 4, "y": 3 },
+    { "unitId": "enemy-mid", "x": 3, "y": 3 },
+    { "unitId": "enemy-top", "x": 5, "y": 1 }
+  ]
+}

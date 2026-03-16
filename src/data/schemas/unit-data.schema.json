@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unit-data.schema.json",
+  "title": "Unit Data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "team",
+    "hp",
+    "maxHp",
+    "atk",
+    "def",
+    "weight",
+    "canBePushed",
+    "sprite_path"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "team": {
+      "type": "string",
+      "enum": ["ally", "enemy", "neutral"]
+    },
+    "hp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "maxHp": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "atk": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "def": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "weight": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "canBePushed": {
+      "type": "boolean"
+    },
+    "sprite_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "image_area": {
+      "$ref": "./image-area.schema.json"
+    }
+  }
+}

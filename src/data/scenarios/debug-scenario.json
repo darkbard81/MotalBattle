@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/scenario.schema.json",
+  "id": "debug-scenario",
+  "title": "Debug Campaign",
+  "description": "다중 스테이지 흐름 검증을 위한 최소 시나리오 예제.",
+  "startingStepId": "intro-dialogue",
+  "steps": [
+    {
+      "id": "intro-dialogue",
+      "type": "dialogue",
+      "title": "Dialog 01",
+      "description": "첫 전투 전 도입 대화.",
+      "dialogId": "dialog-01",
+      "nextStepId": "stage-01-step"
+    },
+    {
+      "id": "stage-01-step",
+      "type": "stage",
+      "title": "Stage 01",
+      "description": "기본 전투 규칙 확인.",
+      "stageId": "stage-01",
+      "nextStepId": "stage-02-step"
+    },
+    {
+      "id": "stage-02-step",
+      "type": "stage",
+      "title": "Stage 02",
+      "description": "hazard와 좁은 통로 전술 확인.",
+      "stageId": "stage-02"
+    }
+  ]
+}

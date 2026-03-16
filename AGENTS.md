@@ -1,0 +1,31 @@
+1. 로컬 명령 실행 규칙
+- Flatpak VS Code 환경에서는 기본 `PATH`에 Node.js/NPM 경로가 없을 수 있음
+- npm 스크립트 실행 시 아래 형식을 우선 사용
+  - `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run <script>`
+- 개별 바이너리 실행 시 아래 경로를 사용 가능
+  - `/home/deck/.nvm/versions/node/v20.19.5/bin/node`
+  - `/home/deck/.nvm/versions/node/v20.19.5/bin/npm`
+- `PATH`를 설정할 때는 Node 경로를 앞에 추가하고, 기존 시스템 `PATH`는 뒤에 유지
+- 이 저장소에서 Node.js 관련 명령을 실행할 때는 위 규칙을 기본값으로 참조
+
+2. 구현 현황 문서 관리 규칙
+- 구현 현황의 최종 기준 문서는 `docs/IMPLEMENTATION_STATUS.md` 이다
+- 구현 작업을 수행한 뒤에는 반드시 `docs/IMPLEMENTATION_STATUS.md`를 현재 기준으로 갱신한다
+- `RoadMap.md`는 계획 문서로 유지하고, 실제 구현 완료/진행/미시작 상태는 `docs/IMPLEMENTATION_STATUS.md`에 기록한다
+- 다음 단계(`Next Action`)를 제안하거나 갱신하기 전에 반드시 `RoadMap.md`와 `docs/IMPLEMENTATION_STATUS.md`를 함께 검토한다
+- `Next Action`은 로드맵의 핵심 컨셉, 단계 순서, 현재 구현 상태를 기준으로 정하고, 임의로 다른 방향으로 흘러가지 않도록 한다
+- 로드맵과 다른 선택이 필요하면 먼저 그 차이를 명시하고, 사용자의 확인 없이 로드맵에서 벗어난 방향을 확정하지 않는다
+- `docs/IMPLEMENTATION_STATUS.md`를 갱신할 때는 단순 항목 추가로 끝내지 말고 현재 구현 기준으로 전체 정합성을 다시 맞춘다
+- 구현이 완료된 항목은 `Completed`로 올리고, 같은 항목이 `In Progress`나 `Not Started`에 남아 있지 않도록 정리한다
+- 현재 단계가 로드맵 기준으로 이동했으면 `Current Phase`를 즉시 갱신하고, 기준 날짜도 실제 갱신 날짜로 맞춘다
+- 테스트 수나 빌드 검증 결과를 기록할 때는 이전 수치를 누적하지 말고 최신 기준 값으로 교체한다
+- `Deferred Until Approval`에 넣은 항목은 사용자의 승인 없이 `Next Action`으로 올리지 않는다
+- `Next Action`은 1~3개 수준의 실제 다음 구현 단위만 남기고, 이미 완료된 작업이나 포괄적 표현은 제거한다
+- 구현 상태 문서에는 최소한 다음 항목을 유지한다
+  - Current Phase
+  - Completed
+  - In Progress
+  - Not Started
+  - Fixed Decisions
+  - Open Questions
+  - Next Action

@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/stage.schema.json",
+  "id": "stage-02",
+  "title": "Hazard Corridor",
+  "description": "hazard와 벽 지형을 이용해 적을 좁은 통로로 유도하는 스테이지.",
+  "objective": "상단 통로를 돌파하고 적 2기를 정리한다.",
+  "background_path": "src/data/assets/BattleStage01.png",
+  "image_area": {
+    "x": 128,
+    "y": 64,
+    "w": 512,
+    "h": 512
+  },
+  "width": 8,
+  "height": 8,
+  "terrain": [
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "wall", "wall", "floor", "floor", "wall", "floor", "floor"],
+    ["floor", "floor", "hazard", "floor", "floor", "wall", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "wall", "floor", "floor", "hazard", "floor", "floor", "floor"],
+    ["floor", "wall", "floor", "floor", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "wall", "floor", "floor", "floor", "floor"],
+    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"]
+  ],
+  "units": [
+    { "unitId": "ally-left", "x": 1, "y": 6 },
+    { "unitId": "ally-right", "x": 2, "y": 6 },
+    { "unitId": "enemy-mid", "x": 4, "y": 3 },
+    { "unitId": "enemy-top", "x": 6, "y": 1 }
+  ]
+}

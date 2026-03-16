@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "image-area.schema.json",
+  "title": "Image Area",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["x", "y", "w", "h"],
+  "properties": {
+    "x": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "y": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "w": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "h": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

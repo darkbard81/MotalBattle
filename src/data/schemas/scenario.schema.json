@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scenario.schema.json",
+  "title": "Scenario Data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "startingStepId", "steps"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "startingStepId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "title"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["stage", "dialogue"]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "stageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dialogId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nextStepId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "speaker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "stage"
+                }
+              }
+            },
+            "then": {
+              "required": ["stageId"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "dialogue"
+                }
+              }
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": ["lines"]
+                },
+                {
+                  "required": ["dialogId"]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

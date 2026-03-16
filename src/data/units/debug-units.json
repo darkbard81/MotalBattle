@@ -1,0 +1,75 @@
+{
+  "$schema": "../schemas/unit-catalog.schema.json",
+  "ally-left": {
+    "id": "ally-left",
+    "name": "Ally Left",
+    "team": "ally",
+    "hp": 100,
+    "maxHp": 100,
+    "atk": 4,
+    "def": 1,
+    "weight": 1,
+    "canBePushed": true,
+    "sprite_path": "src/data/assets/Hero01.png",
+    "image_area": {
+      "x": 390,
+      "y": 25,
+      "w": 256,
+      "h": 256
+    }
+  },
+  "ally-right": {
+    "id": "ally-right",
+    "name": "Ally Right",
+    "team": "ally",
+    "hp": 100,
+    "maxHp": 100,
+    "atk": 4,
+    "def": 1,
+    "weight": 1,
+    "canBePushed": true,
+    "sprite_path": "src/data/assets/Hero02.png",
+    "image_area": {
+      "x": 379,
+      "y": 45,
+      "w": 256,
+      "h": 256
+    }
+  },
+  "enemy-mid": {
+    "id": "enemy-mid",
+    "name": "Enemy Mid",
+    "team": "enemy",
+    "hp": 60,
+    "maxHp": 60,
+    "atk": 3,
+    "def": 1,
+    "weight": 1,
+    "canBePushed": false,
+    "sprite_path": "src/data/assets/Enemy01.png",
+    "image_area": {
+      "x": 377,
+      "y": 123,
+      "w": 256,
+      "h": 256
+    }
+  },
+  "enemy-top": {
+    "id": "enemy-top",
+    "name": "Enemy Top",
+    "team": "enemy",
+    "hp": 80,
+    "maxHp": 80,
+    "atk": 3,
+    "def": 1,
+    "weight": 1,
+    "canBePushed": false,
+    "sprite_path": "src/data/assets/Enemy02.png",
+    "image_area": {
+      "x": 224,
+      "y": 452,
+      "w": 256,
+      "h": 256
+    }
+  }
+}
