@@ -4,33 +4,33 @@
   "title": "시작되는 여정",
   "steps": [
     {
-      "background": "src/data/assets/BG_Village01.png",
+      "background": "src/data/assets/BG_Village01.webp",
       "msg_type": "나레이션",
       "message": "아침 안개가 마을을 천천히 감싸고 있었다.\n작은 엘프 마을은 여느 때처럼 평화로웠다.\n하지만 숲 너머에서 이상한 바람이 불어오고 있었다.\n누군가는 아직 눈치채지 못했지만 변화의 기운은 이미 시작되고 있었다.\n그리고 세 명의 엘프가 그 조용한 광장에서 이야기를 나누고 있었다."
     },
     {
-      "background": "src/data/assets/BG_Village01.png",
-      "standing": "src/data/assets/Hero01.png",
+      "background": "src/data/assets/BG_Village01.webp",
+      "standing": "src/data/assets/Hero01.webp",
       "msg_type": "대화",
       "speaker": "엘프1",
       "message": "오늘 마을 분위기… 조금 이상하지 않아? 숲에서 바람 소리가 평소랑 달라."
     },
     {
-      "background": "src/data/assets/BG_Village01.png",
-      "standing": "src/data/assets/Hero02.png",
+      "background": "src/data/assets/BG_Village01.webp",
+      "standing": "src/data/assets/Hero02.webp",
       "msg_type": "대화",
       "speaker": "엘프2",
       "message": "나도 느꼈어. 아까 숲 쪽을 봤는데 새들이 전부 반대 방향으로 날아가더라."
     },
     {
-      "background": "src/data/assets/BG_Village01.png",
-      "standing": "src/data/assets/Hero01.png",
+      "background": "src/data/assets/BG_Village01.webp",
+      "standing": "src/data/assets/Hero01.webp",
       "msg_type": "대화",
       "speaker": "엘프1",
       "message": "흠… 그냥 바람 때문일 수도 있지. 하지만 왠지 오늘은 뭔가 일이 일어날 것 같은 기분이야."
     },
     {
-      "background": "src/data/assets/BG_Forest01.png",
+      "background": "src/data/assets/BG_Forest01.webp",
       "standing": "",
       "msg_type": "묘사",
       "message": "그들이 모르는 사이, 숲 깊은 곳에서 바람이 조용히 방향을 바꾸고 있었다."

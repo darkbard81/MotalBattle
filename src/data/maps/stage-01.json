@@ -4,7 +4,7 @@
   "title": "Formation Break",
   "description": "첫 전투. swap과 협공을 익히는 기본 스테이지.",
   "objective": "적 2기를 모두 쓰러뜨린다.",
-  "background_path": "src/data/assets/BattleStage01.png",
+  "background_path": "src/data/assets/BattleStage01.webp",
   "image_area": {
     "x": 0,
     "y": 0,

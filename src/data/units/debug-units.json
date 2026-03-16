@@ -10,7 +10,7 @@
     "def": 1,
     "weight": 1,
     "canBePushed": true,
-    "sprite_path": "src/data/assets/Hero01.png",
+    "sprite_path": "src/data/assets/Hero01.webp",
     "image_area": {
       "x": 390,
       "y": 25,
@@ -28,7 +28,7 @@
     "def": 1,
     "weight": 1,
     "canBePushed": true,
-    "sprite_path": "src/data/assets/Hero02.png",
+    "sprite_path": "src/data/assets/Hero02.webp",
     "image_area": {
       "x": 379,
       "y": 45,
@@ -46,7 +46,7 @@
     "def": 1,
     "weight": 1,
     "canBePushed": false,
-    "sprite_path": "src/data/assets/Enemy01.png",
+    "sprite_path": "src/data/assets/Enemy01.webp",
     "image_area": {
       "x": 377,
       "y": 123,
@@ -64,7 +64,7 @@
     "def": 1,
     "weight": 1,
     "canBePushed": false,
-    "sprite_path": "src/data/assets/Enemy02.png",
+    "sprite_path": "src/data/assets/Enemy02.webp",
     "image_area": {
       "x": 224,
       "y": 452,

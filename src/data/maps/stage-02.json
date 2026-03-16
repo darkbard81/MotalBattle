@@ -4,7 +4,7 @@
   "title": "Hazard Corridor",
   "description": "hazard와 벽 지형을 이용해 적을 좁은 통로로 유도하는 스테이지.",
   "objective": "상단 통로를 돌파하고 적 2기를 정리한다.",
-  "background_path": "src/data/assets/BattleStage01.png",
+  "background_path": "src/data/assets/BattleStage01.webp",
   "image_area": {
     "x": 128,
     "y": 64,

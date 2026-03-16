@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/stage.schema.json",
   "id": "debug-battle",
-  "background_path": "src/data/assets/BattleStage01.png",
+  "background_path": "src/data/assets/BattleStage01.webp",
   "image_area": {
     "x": 0,
     "y": 0,
