@@ -11,19 +11,112 @@
   "width": 8,
   "height": 8,
   "terrain": [
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "hazard", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "wall", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"],
-    ["floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor"]
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "hazard",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "wall",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ],
+    [
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor",
+      "floor"
+    ]
   ],
   "units": [
-    { "unitId": "ally-left", "x": 1, "y": 3 },
-    { "unitId": "ally-right", "x": 4, "y": 3 },
-    { "unitId": "enemy-mid", "x": 3, "y": 3 },
-    { "unitId": "enemy-top", "x": 5, "y": 1 }
+    {
+      "unitId": "ally-left",
+      "x": 1,
+      "y": 3
+    },
+    {
+      "unitId": "ally-right",
+      "x": 4,
+      "y": 3
+    },
+    {
+      "unitId": "enemy-mid",
+      "x": 3,
+      "y": 3
+    },
+    {
+      "unitId": "enemy-top",
+      "x": 5,
+      "y": 1
+    }
+  ],
+  "objectives": [
+    {
+      "type": "defeat_all"
+    }
   ]
 }

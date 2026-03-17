@@ -5,6 +5,7 @@ import {
   createWallCell,
   type CellData
 } from "../board/Cell";
+import type { StageObjective } from "../rules/ObjectiveManager";
 import { createUnit } from "../unit/UnitFactory";
 import type { UnitData } from "../unit/Unit";
 import type { TerrainType } from "../types/enums";
@@ -20,6 +21,8 @@ export interface StageData {
   title?: string;
   description?: string;
   objective?: string;
+  objectives?: StageObjective[];
+  turnLimit?: number;
   background_path?: string;
   image_area?: {
     x: number;

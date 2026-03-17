@@ -15,6 +15,7 @@ import {
 } from "../../core/data/ScenarioLoader";
 import type { DialogData } from "../../core/data/DialogLoader";
 import type { BattleEvent } from "../../core/rules/RuleTypes";
+import { ObjectiveManager, type ObjectiveStatus } from "../../core/rules/ObjectiveManager";
 import {
   getDebugUnitCatalog,
   getScenarioDefinitionById
@@ -46,6 +47,9 @@ export class GameScene extends Phaser.Scene {
   private currentStage?: StageData;
   private currentDialog?: DialogData;
   private currentDialogIndex = 0;
+  private readonly objectiveManager = new ObjectiveManager();
+  private currentTurn = 0;
+  private currentObjectiveStatus: ObjectiveStatus = "ongoing";
   private pendingTransition = false;
   private flowActions: Partial<Record<"primary" | "secondary" | "tertiary", () => void>> = {};
   private currentPreview:
@@ -120,6 +124,7 @@ export class GameScene extends Phaser.Scene {
   private loadStage(stage: StageData): void {
     this.destroyStagePresentation();
     this.currentStage = stage;
+    this.currentTurn = 0;
     this.board = createBoardFromStageData(stage, this.unitCatalog);
 
     const boardPixelWidth = this.board.width * this.tileSize;
@@ -154,6 +159,8 @@ export class GameScene extends Phaser.Scene {
         this.syncUnitViews();
       },
       onBattleResolved: (summary) => {
+        this.currentTurn += 1;
+        this.currentObjectiveStatus = this.evaluateCurrentObjectiveStatus();
         this.updateBattleSummary(summary);
         this.checkStageCompletion();
       },
@@ -248,6 +255,8 @@ export class GameScene extends Phaser.Scene {
     this.updateBattleSummary(stage.objective ? `Objective: ${stage.objective}` : "Objective: none");
     this.updateHeaderTimer(false, 0, 5000);
     this.syncUnitViews();
+    this.currentObjectiveStatus = this.evaluateCurrentObjectiveStatus();
+    this.checkStageCompletion();
 
     debugSceneInit({
       debugOn: DEBUG_ON,
@@ -340,13 +349,24 @@ export class GameScene extends Phaser.Scene {
     this.animationQueue.clear();
   }
 
+  private evaluateCurrentObjectiveStatus(): ObjectiveStatus {
+    if (!this.board) {
+      return "ongoing";
+    }
+
+    return this.objectiveManager.evaluate(this.currentStage?.objectives ?? [], {
+      board: this.board,
+      currentTurn: this.currentTurn,
+      turnLimit: this.currentStage?.turnLimit
+    });
+  }
+
   private checkStageCompletion(): void {
     if (!this.board || !this.currentStep || this.pendingTransition) {
       return;
     }
 
-    const remainingEnemies = this.board.getAllUnits().filter((unit) => unit.team === "enemy");
-    if (remainingEnemies.length > 0) {
+    if (this.currentObjectiveStatus !== "success") {
       return;
     }
 
