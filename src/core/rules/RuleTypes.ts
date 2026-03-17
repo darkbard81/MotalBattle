@@ -1,6 +1,7 @@
 import type { Vec2 } from "../types/common";
 import type { MoveFailureReason } from "../types/enums";
 import type { HazardEvent } from "./HazardResolver";
+import type { ObjectiveStatus } from "./ObjectiveManager";
 
 export interface MoveIntent {
   unitId: string;
@@ -24,6 +25,15 @@ export interface MoveResult {
   triggeredBattles: BattleEvent[];
   triggeredHazards: HazardEvent[];
   failedReason?: MoveFailureReason;
+}
+
+export interface TurnResolutionState {
+  status: ObjectiveStatus;
+  currentTurn: number;
+}
+
+export interface TurnResult extends MoveResult {
+  objectiveState: TurnResolutionState;
 }
 
 export interface PushResult {

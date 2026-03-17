@@ -9,7 +9,9 @@ describe("TurnResolver", () => {
     placeUnit(board, createUnit({ id: "enemy-mid", team: "enemy", hp: 6, maxHp: 6, def: 1 }, 3, 1));
     placeUnit(board, createUnit({ id: "ally-right", team: "ally", atk: 4 }, 4, 1));
 
-    const resolver = new TurnResolver();
+    const resolver = new TurnResolver(undefined, undefined, undefined, undefined, {
+      objectives: [{ type: "defeat_all" }]
+    });
     const result = resolver.resolve(
       board,
       createMoveIntent("ally-left", 1, 1, [[2, 1]])
@@ -19,13 +21,17 @@ describe("TurnResolver", () => {
     expect(result.triggeredBattles).toHaveLength(1);
     expect(board.getUnit("enemy-mid")).toBeNull();
     expect(board.getUnitAt(2, 1)?.id).toBe("ally-left");
+    expect(result.objectiveState).toEqual({ status: "success", currentTurn: 1 });
   });
 
   it("returns the move failure without resolving battle", () => {
     const board = createBoard();
     placeUnit(board, createUnit({ id: "ally-left", team: "ally" }, 1, 1));
+    placeUnit(board, createUnit({ id: "enemy-1", team: "enemy" }, 4, 4));
 
-    const resolver = new TurnResolver();
+    const resolver = new TurnResolver(undefined, undefined, undefined, undefined, {
+      objectives: [{ type: "defeat_all" }]
+    });
     const result = resolver.resolve(
       board,
       createMoveIntent("ally-left", 1, 1, [[3, 1]])
@@ -34,6 +40,7 @@ describe("TurnResolver", () => {
     expect(result.success).toBe(false);
     expect(result.failedReason).toBe("NON_CARDINAL_STEP");
     expect(result.triggeredBattles).toHaveLength(0);
+    expect(result.objectiveState).toEqual({ status: "ongoing", currentTurn: 0 });
   });
 
   it("applies hazard damage after battle resolution", () => {
