@@ -25,7 +25,28 @@ describe("ScenarioLoader", () => {
           id: "stage-1",
           type: "stage",
           title: "Stage One",
-          stageId: "stage-01"
+          stageId: "stage-01",
+          nextStepId: "fallback-step",
+          onSuccess: "success-step",
+          onFail: "fail-step"
+        },
+        {
+          id: "fallback-step",
+          type: "dialogue",
+          title: "Fallback",
+          lines: ["fallback"]
+        },
+        {
+          id: "success-step",
+          type: "dialogue",
+          title: "Success",
+          lines: ["success"]
+        },
+        {
+          id: "fail-step",
+          type: "dialogue",
+          title: "Fail",
+          lines: ["fail"]
         }
       ]
     },
@@ -64,6 +85,31 @@ describe("ScenarioLoader", () => {
   it("returns the next step from nextStepId", () => {
     const step = getNextScenarioStep(definition.scenario, "dialogue-1");
     expect(step?.id).toBe("stage-1");
+  });
+
+  it("returns the success branch for a stage step", () => {
+    const step = getNextScenarioStep(definition.scenario, "stage-1", "success");
+    expect(step?.id).toBe("success-step");
+  });
+
+  it("returns the fail branch for a stage step", () => {
+    const step = getNextScenarioStep(definition.scenario, "stage-1", "fail");
+    expect(step?.id).toBe("fail-step");
+  });
+
+  it("throws when a configured branch target is missing", () => {
+    expect(() =>
+      getNextScenarioStep(
+        {
+          ...definition.scenario,
+          steps: definition.scenario.steps.map((step) =>
+            step.id === "stage-1" ? { ...step, onSuccess: "missing-step" } : step
+          )
+        },
+        "stage-1",
+        "success"
+      )
+    ).toThrowError("getNextScenarioStep: missing next step missing-step");
   });
 
   it("resolves the stage data for a stage step", () => {

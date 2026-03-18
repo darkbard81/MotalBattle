@@ -124,6 +124,50 @@
                 "minimum": 0
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "x",
+              "y",
+              "team"
+            ],
+            "properties": {
+              "type": {
+                "const": "reach_cell"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "team": {
+                "type": "string",
+                "enum": ["ally", "enemy"]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "unitId"
+            ],
+            "properties": {
+              "type": {
+                "const": "protect_unit"
+              },
+              "unitId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           }
         ]
       }

@@ -3,7 +3,7 @@
   "id": "stage-02",
   "title": "Hazard Corridor",
   "description": "hazard와 벽 지형을 이용해 적을 좁은 통로로 유도하는 스테이지.",
-  "objective": "상단 통로를 돌파하고 적 2기를 정리한다.",
+  "objective": "ally-left를 지키면서 적 2기를 모두 쓰러뜨린다.",
   "background_path": "src/data/assets/BattleStage01.webp",
   "image_area": {
     "x": 128,
@@ -118,6 +118,10 @@
     }
   ],
   "objectives": [
+    {
+      "type": "protect_unit",
+      "unitId": "ally-left"
+    },
     {
       "type": "defeat_all"
     }

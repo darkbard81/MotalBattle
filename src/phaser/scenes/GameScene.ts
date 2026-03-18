@@ -366,15 +366,45 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.currentObjectiveStatus !== "success") {
+    if (this.currentObjectiveStatus === "ongoing") {
       return;
     }
 
-    this.updateStatus(`Stage clear: ${this.currentStage?.title ?? this.currentStep.title}`);
-    this.updateBattleSummary("Stage cleared.");
-    const nextStep = getNextScenarioStep(this.scenarioDefinition.scenario, this.currentStep.id);
+    const result = this.currentObjectiveStatus;
+    const isSuccess = result === "success";
+    const nextStep = getNextScenarioStep(this.scenarioDefinition.scenario, this.currentStep.id, result);
+
+    if (isSuccess) {
+      this.updateStatus(`Stage clear: ${this.currentStage?.title ?? this.currentStep.title}`);
+      this.updateBattleSummary("Stage cleared.");
+    } else {
+      this.updateStatus(`Stage failed: ${this.currentStage?.title ?? this.currentStep.title}`);
+      this.updateBattleSummary("Stage failed.");
+    }
 
     if (!nextStep) {
+      if (!isSuccess) {
+        this.showFlowPanel({
+          title: "Stage Failed",
+          message: "Objective failed. Choose the next action.",
+          primaryLabel: "Retry",
+          secondaryLabel: "Back To Title",
+          tertiaryLabel: "",
+          actions: {
+            primary: () => {
+              if (this.currentStage) {
+                this.loadStage(this.currentStage);
+              }
+            },
+            secondary: () => {
+              this.scene.stop(UIScene.KEY);
+              this.scene.start("TitleScene");
+            }
+          }
+        });
+        return;
+      }
+
       this.showFlowPanel({
         title: "Scenario Complete",
         message: "All scenario steps cleared.",
@@ -397,9 +427,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.showFlowPanel({
-      title: "Stage Clear",
+      title: isSuccess ? "Stage Clear" : "Stage Failed",
       message: `Next: ${nextStep.title}`,
-      primaryLabel: "Next Stage",
+      primaryLabel: "Continue",
       secondaryLabel: "Retry",
       tertiaryLabel: "Back To Title",
       actions: {

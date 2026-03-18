@@ -9,6 +9,8 @@ export interface ScenarioStep {
   stageId?: string;
   dialogId?: string;
   nextStepId?: string;
+  onSuccess?: string;
+  onFail?: string;
   speaker?: string;
   lines?: string[];
 }
@@ -44,20 +46,45 @@ export function getStartingStep(scenario: ScenarioData): ScenarioStep {
 
 export function getNextScenarioStep(
   scenario: ScenarioData,
-  currentStepId: string
+  currentStepId: string,
+  result: "default" | "success" | "fail" = "default"
 ): ScenarioStep | null {
   const stepMap = getScenarioStepMap(scenario);
   const currentStep = stepMap.get(currentStepId);
-  if (!currentStep?.nextStepId) {
+  if (!currentStep) {
     return null;
   }
 
-  const nextStep = stepMap.get(currentStep.nextStepId);
+  const nextStepId = getNextStepIdForResult(currentStep, result);
+  if (!nextStepId) {
+    return null;
+  }
+
+  const nextStep = stepMap.get(nextStepId);
   if (!nextStep) {
-    throw new Error(`getNextScenarioStep: missing next step ${currentStep.nextStepId}`);
+    throw new Error(`getNextScenarioStep: missing next step ${nextStepId}`);
   }
 
   return nextStep;
+}
+
+function getNextStepIdForResult(
+  step: ScenarioStep,
+  result: "default" | "success" | "fail"
+): string | undefined {
+  if (step.type !== "stage") {
+    return step.nextStepId;
+  }
+
+  if (result === "success") {
+    return step.onSuccess ?? step.nextStepId;
+  }
+
+  if (result === "fail") {
+    return step.onFail;
+  }
+
+  return step.nextStepId;
 }
 
 export function getStageForScenarioStep(

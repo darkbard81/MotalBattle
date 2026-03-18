@@ -59,6 +59,14 @@
             "type": "string",
             "minLength": 1
           },
+          "onSuccess": {
+            "type": "string",
+            "minLength": 1
+          },
+          "onFail": {
+            "type": "string",
+            "minLength": 1
+          },
           "speaker": {
             "type": "string",
             "minLength": 1

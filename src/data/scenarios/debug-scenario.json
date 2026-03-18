@@ -19,14 +19,36 @@
       "title": "Stage 01",
       "description": "기본 전투 규칙 확인.",
       "stageId": "stage-01",
-      "nextStepId": "stage-02-step"
+      "onSuccess": "stage-02-step"
     },
     {
       "id": "stage-02-step",
       "type": "stage",
       "title": "Stage 02",
       "description": "hazard와 좁은 통로 전술 확인.",
-      "stageId": "stage-02"
+      "stageId": "stage-02",
+      "onSuccess": "victory-dialogue",
+      "onFail": "failure-dialogue"
+    },
+    {
+      "id": "victory-dialogue",
+      "type": "dialogue",
+      "title": "Victory",
+      "description": "임무 성공 후 대화.",
+      "lines": [
+        "목표를 달성했다.",
+        "다음 시나리오 준비로 넘어간다."
+      ]
+    },
+    {
+      "id": "failure-dialogue",
+      "type": "dialogue",
+      "title": "Failure",
+      "description": "보호 대상 손실 후 대화.",
+      "lines": [
+        "보호 대상을 잃었다.",
+        "작전을 재정비해야 한다."
+      ]
     }
   ]
 }
