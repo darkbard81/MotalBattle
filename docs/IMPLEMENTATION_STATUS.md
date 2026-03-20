@@ -2,11 +2,12 @@
 
 ## 1. Current Phase
 - 현재 단계: **Phase B-3 (데이터 스키마 갱신)**
-- 기준 날짜: **2026-03-17**
+- 기준 날짜: **2026-03-20**
 - 요약:
-  - 코어 규칙(이동/밀림/전투/하자드), 드래그 상호작용, 최소 적 AI, 데이터 로더/스키마, 다중 스테이지+대화 기본 루프가 동작한다.
+  - 코어 규칙(이동/밀림/전투/하자드), 드래그 상호작용, 최소 적 AI, 데이터 로더/스키마 검증, 다중 스테이지+대화 기본 루프가 동작한다.
   - objective 판정은 `defeat_all`, `survive_n_turns`, `reach_cell`, `protect_unit`를 지원하고, stage 결과에 따라 `onSuccess` / `onFail` 분기 전이가 가능하다.
   - debug scenario는 성공 분기와 실패 분기를 모두 포함하며, stage 실패 시 retry/title 또는 fail branch로 이어지는 플로우가 정리되었다.
+  - `stage` / `scenario` / `dialog` / `unit catalog` JSON은 로더 시점에 schema 검증과 참조 검증을 거치며, `reach_cell` 샘플 스테이지가 추가되었다.
 
 ## 2. Completed
 - 프로젝트 기반(Phaser + Vite + TypeScript) 및 기본 Scene 구조 구축 완료
@@ -15,6 +16,7 @@
   - `Board`, `Cell`, `BoardQuery`, `Unit`, `UnitState`
   - `MoveResolver`, `PushResolver`, `BattleResolver`, `HazardResolver`, `TurnResolver`
   - `DragInteractionResolver`로 드래그 중 `move/swap/block/none` 규칙 적용
+  - `block` 충돌 시 막힌 축만 유지하고 다른 축 드래그는 이어지는 프리뷰 동작 반영
 - 핵심 규칙 결정 반영 완료
   - 아군 타일 진입 시 swap
   - 적/장애물/맵 밖 진입 시 block
@@ -26,6 +28,8 @@
   - stage/scenario/dialog/unit catalog 로딩 구조 연결
   - stage 메타(`title`, `description`, `objective`) 및 image area 반영
   - stage/scenario schema에 objective/branch 필드 반영
+  - `Ajv2020` 기반 schema 검증을 debug 로더 경로에 연결
+  - 누락 필드/잘못된 branch target을 사람이 읽기 쉬운 에러 메시지로 정리
 - 시나리오 진행 루프 일반화 2차 완료
   - `dialogue -> stage -> next step` 기본 전환 유지
   - stage 결과 기반 `onSuccess` / `onFail` 분기 지원
@@ -37,13 +41,16 @@
 - 디버그 콘텐츠/계획 문서 동기화 완료
   - `debug-scenario`에 success/fail branch 추가
   - `stage-02`에 `protect_unit` objective 반영
+  - `stage-reach-cell` 샘플 스테이지 추가
   - `Phase_Plan_dev.md` 작성
 - 검증 상태 (최신 기준)
-  - 단위 테스트: **47 passed**
+  - 단위 테스트: **57 passed**
+  - 테스트 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run test`
   - 빌드: **성공**
+  - 빌드 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run build`
 
 ## 3. In Progress
-- Phase B-3 잔여 작업: 실제 JSON schema 검증 실행 경로와 실패 메시지 가독성 정리
+- 없음
 
 ## 4. Not Started
 - 대화 UI 고도화(로그/스킵/자동재생 등)
@@ -69,13 +76,13 @@
 - objective 평가는 objective별 judge dispatch(map) 구조를 사용한다.
 - stage step 전이는 `onSuccess` / `onFail` 우선, dialogue step 전이는 `nextStepId`를 사용한다.
 - `protect_unit`은 지정 유닛이 보드에서 사라지면 즉시 실패한다.
+- JSON schema 검증은 로더 시점에 수행하고, schema 오류와 scenario branch 참조 오류를 함께 보고한다.
 
 ## 6. Open Questions
-- JSON schema 검증을 로더 시점에 수행할지, 별도 검증 스크립트/빌드 단계에 둘지
-- `reach_cell` 샘플 스테이지를 debug scenario에 바로 추가할지, 다음 콘텐츠 단계에서 추가할지
 - 대화 UI 고도화를 Phase C-1에서 어디까지 MVP 범위로 둘지
+- `stage-reach-cell`을 실제 debug scenario 흐름에 연결할지, 별도 테스트/샘플 자산으로 유지할지
 
 ## 7. Next Action
-1. **실제 JSON schema 검증 실행 경로 추가** (`stage` / `scenario` / `dialog` 데이터에 대해 로드 또는 빌드 단계에서 검증 수행)
-2. **검증 실패 메시지 가독성 개선** (누락 필드, 잘못된 branch target, objective 필드 오류를 사람이 바로 읽을 수 있게 정리)
-3. **`reach_cell` 샘플 콘텐츠와 테스트 보강** (debug 또는 별도 샘플 stage에서 새 objective를 실제 경로로 검증)
+1. **대화 UI MVP 범위 확정 및 상태 구조 정리** (`log` / `skip` / `auto-play` 중 우선 구현 단위를 정하고 `UIScene`/registry 상태를 정리)
+2. **대화 진행 UX 1차 구현** (현재 dialogue overlay에 `skip` 또는 `auto-play` 중 최소 1개를 실제 동작으로 연결)
+3. **모바일/포인터 기반 대화 입력 정리** (SPACE 외 입력 경로를 단순화하고 실수 입력을 줄이는 방향으로 보강)

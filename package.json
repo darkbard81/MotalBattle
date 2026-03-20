@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "ajv": "^8.18.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {

@@ -2,19 +2,17 @@ import stageData from "../../data/maps/debug-battle.json";
 import unitCatalog from "../../data/units/debug-units.json";
 import {
   createBoardFromStageData,
-  type StageData,
   type UnitCatalog
 } from "../data/StageLoader";
+import { validateStageData, validateUnitCatalogData } from "../data/DataValidator";
 
 export function getDebugBattleDefinition(): {
-  stage: StageData;
+  stage: ReturnType<typeof validateStageData>;
   unitCatalog: UnitCatalog;
 } {
-  const { $schema: _schema, ...catalog } = unitCatalog;
-
   return {
-    stage: stageData as StageData,
-    unitCatalog: catalog as UnitCatalog
+    stage: validateStageData(stageData, "src/data/maps/debug-battle.json"),
+    unitCatalog: validateUnitCatalogData(unitCatalog, "src/data/units/debug-units.json")
   };
 }
 

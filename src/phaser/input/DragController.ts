@@ -16,6 +16,7 @@ import {
   debugEnemyTurn
 } from "../../game/debug";
 import { BoardView } from "../objects/BoardView";
+import { getBlockedPreviewWorld, isPointerOnBlockedCell } from "./dragPreview";
 
 interface DragControllerCallbacks {
   onSelectionChange: (unitId: string | null) => void;
@@ -62,6 +63,7 @@ export class DragController {
   private selectedUnitId: string | null = null;
   private pointerCell: Vec2 | null = null;
   private blockedDirection: Vec2 | null = null;
+  private blockedCell: Vec2 | null = null;
   private dragTimer?: Phaser.Time.TimerEvent;
   private timerTicker?: Phaser.Time.TimerEvent;
 
@@ -110,6 +112,7 @@ export class DragController {
     this.selectedUnitId = unit.id;
     this.pointerCell = { ...cell };
     this.blockedDirection = null;
+    this.blockedCell = null;
     this.callbacks.onSelectionChange(this.selectedUnitId);
     this.callbacks.onPreview({
       unitId: unit.id,
@@ -163,6 +166,8 @@ export class DragController {
 
     const targetCell = this.boardView.worldToGrid(pointer.worldX, pointer.worldY);
     if (!targetCell) {
+      this.blockedDirection = null;
+      this.blockedCell = null;
       this.callbacks.onPreview({
         unitId: this.selectedUnitId,
         pointerWorld: { x: pointer.worldX, y: pointer.worldY },
@@ -173,17 +178,13 @@ export class DragController {
     }
 
     if (this.blockedDirection) {
-      const delta = {
-        x: targetCell.x - activeUnit.gridPos.x,
-        y: targetCell.y - activeUnit.gridPos.y
-      };
-      const isBackToOrigin = delta.x === 0 && delta.y === 0;
-      const staysOnBlockedAxis = this.isLockedToBlockedDirection(delta, this.blockedDirection);
-
-      if (isBackToOrigin) {
-        this.blockedDirection = null;
-      } else if (staysOnBlockedAxis) {
-        const previewWorld = this.boardView.gridToWorld(activeUnit.gridPos.x, activeUnit.gridPos.y);
+      if (isPointerOnBlockedCell(targetCell, this.blockedCell)) {
+        const previewWorld = getBlockedPreviewWorld(
+          { x: pointer.worldX, y: pointer.worldY },
+          this.boardView.gridToWorld(activeUnit.gridPos.x, activeUnit.gridPos.y),
+          this.blockedDirection,
+          this.boardView.tileSize
+        );
         this.callbacks.onPreview({
           unitId: this.selectedUnitId,
           pointerWorld: previewWorld,
@@ -191,9 +192,10 @@ export class DragController {
           kind: "block"
         });
         return;
-      } else {
-        this.blockedDirection = null;
       }
+
+      this.blockedDirection = null;
+      this.blockedCell = null;
     }
 
     if (this.pointerCell && this.pointerCell.x === targetCell.x && this.pointerCell.y === targetCell.y) {
@@ -211,15 +213,21 @@ export class DragController {
       result.kind === "block" ? { ...result.activePosition } : { ...targetCell };
     this.blockedDirection =
       result.kind === "block"
-        ? {
-            x: Math.sign(targetCell.x - result.activePosition.x),
-            y: Math.sign(targetCell.y - result.activePosition.y)
-          }
-        : null;
+      ? {
+          x: Math.sign(targetCell.x - result.activePosition.x),
+          y: Math.sign(targetCell.y - result.activePosition.y)
+        }
+      : null;
+    this.blockedCell = result.kind === "block" ? { ...targetCell } : null;
     this.handleInteractionResult(result, targetCell);
     const previewWorld =
       result.kind === "block"
-        ? this.boardView.gridToWorld(result.activePosition.x, result.activePosition.y)
+        ? getBlockedPreviewWorld(
+            { x: pointer.worldX, y: pointer.worldY },
+            this.boardView.gridToWorld(result.activePosition.x, result.activePosition.y),
+            this.blockedDirection ?? { x: 0, y: 0 },
+            this.boardView.tileSize
+          )
         : { x: pointer.worldX, y: pointer.worldY };
     this.callbacks.onPreview({
       unitId: this.selectedUnitId,
@@ -368,6 +376,7 @@ export class DragController {
     this.selectedUnitId = null;
     this.pointerCell = null;
     this.blockedDirection = null;
+    this.blockedCell = null;
     this.dragTimer?.remove(false);
     this.dragTimer = undefined;
     this.timerTicker?.remove(false);
@@ -386,15 +395,4 @@ export class DragController {
     this.callbacks.onSelectionChange(null);
   }
 
-  private isLockedToBlockedDirection(delta: Vec2, blockedDirection: Vec2): boolean {
-    if (blockedDirection.x !== 0) {
-      return delta.x * blockedDirection.x > 0;
-    }
-
-    if (blockedDirection.y !== 0) {
-      return delta.y * blockedDirection.y > 0;
-    }
-
-    return false;
-  }
 }
