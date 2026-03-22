@@ -86,7 +86,7 @@ describe("getBlockedPreviewWorld", () => {
 });
 
 describe("getDiagonalSwapCandidate", () => {
-  it("allows a rough diagonal swap when the pointer leans clearly into an open diagonal quadrant", () => {
+  it("allows a diagonal swap once the pointer clearly leans into the target diagonal tile", () => {
     const board = createBoard(4, 4);
     placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));
     placeUnit(board, createUnit({ id: "ally-2", team: "ally" }, 2, 2));
@@ -95,11 +95,27 @@ describe("getDiagonalSwapCandidate", () => {
       board,
       { x: 1, y: 1 },
       { x: 160, y: 160 },
-      { x: 178, y: 178 },
+      { x: 182, y: 182 },
       64
     );
 
     expect(candidate).toEqual({ x: 2, y: 2 });
+  });
+
+  it("does not open diagonal swap for shallow diagonal drift", () => {
+    const board = createBoard(4, 4);
+    placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));
+    placeUnit(board, createUnit({ id: "ally-2", team: "ally" }, 2, 2));
+
+    const candidate = getDiagonalSwapCandidate(
+      board,
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { x: 170, y: 170 },
+      64
+    );
+
+    expect(candidate).toBeNull();
   });
 
   it("still prefers orthogonal intent when one axis dominates too strongly", () => {
