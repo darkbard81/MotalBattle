@@ -67,7 +67,7 @@ interface DragControllerCallbacks {
 }
 
 export class DragController {
-  private static readonly DRAG_DURATION_MS = 50000;
+  private static readonly DRAG_DURATION_MS = 5000;
   private static readonly HOLD_TO_INSPECT_MS = 1500;
   private static readonly SWAP_REARM_INTENT_RATIO = 0.2;
 
