@@ -102,6 +102,22 @@ describe("getDiagonalSwapCandidate", () => {
     expect(candidate).toEqual({ x: 2, y: 2 });
   });
 
+  it("still prefers orthogonal intent when one axis dominates too strongly", () => {
+    const board = createBoard(4, 4);
+    placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));
+    placeUnit(board, createUnit({ id: "ally-2", team: "ally" }, 2, 2));
+
+    const candidate = getDiagonalSwapCandidate(
+      board,
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { x: 220, y: 172 },
+      64
+    );
+
+    expect(candidate).toBeNull();
+  });
+
   it("blocks rough diagonal swap when both orthogonal gates are closed by terrain or enemies", () => {
     const board = createBoard(4, 4);
     placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));

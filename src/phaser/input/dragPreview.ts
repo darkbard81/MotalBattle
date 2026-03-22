@@ -21,8 +21,14 @@ export function getDiagonalSwapCandidate(
 
   const offsetX = pointerWorld.x - activeWorld.x;
   const offsetY = pointerWorld.y - activeWorld.y;
-  const minDiagonalIntent = tileSize * 0.2;
+  const minDiagonalIntent = tileSize * 0.12;
   if (Math.abs(offsetX) < minDiagonalIntent || Math.abs(offsetY) < minDiagonalIntent) {
+    return null;
+  }
+
+  const dominantAxis = Math.max(Math.abs(offsetX), Math.abs(offsetY));
+  const minorAxis = Math.min(Math.abs(offsetX), Math.abs(offsetY));
+  if (dominantAxis <= 0 || minorAxis / dominantAxis < 0.45) {
     return null;
   }
 
