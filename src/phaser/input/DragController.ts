@@ -7,8 +7,8 @@ import {
 } from "../../core/rules/DragInteractionResolver";
 import { EnemyAiResolver } from "../../core/rules/EnemyAiResolver";
 import { HazardResolver } from "../../core/rules/HazardResolver";
-import type { Vec2 } from "../../core/types/common";
 import type { BattleEvent } from "../../core/rules/RuleTypes";
+import type { Vec2 } from "../../core/types/common";
 import {
   debugBattleResult,
   debugDragStart,
@@ -20,6 +20,7 @@ import { getBlockedPreviewWorld, isPointerOnBlockedCell } from "./dragPreview";
 
 interface DragControllerCallbacks {
   onSelectionChange: (unitId: string | null) => void;
+  onInspect: (payload: { unitId: string }) => void;
   onStatus: (message: string) => void;
   onBoardChange: () => void;
   onBattleResolved: (summary: string) => void;
@@ -60,10 +61,15 @@ interface DragControllerCallbacks {
 
 export class DragController {
   private static readonly DRAG_DURATION_MS = 5000;
+  private static readonly HOLD_TO_INSPECT_MS = 1500;
+
   private selectedUnitId: string | null = null;
+  private pressedCell: Vec2 | null = null;
   private pointerCell: Vec2 | null = null;
   private blockedDirection: Vec2 | null = null;
   private blockedCell: Vec2 | null = null;
+  private inspectingUnitId: string | null = null;
+  private holdTimer?: Phaser.Time.TimerEvent;
   private dragTimer?: Phaser.Time.TimerEvent;
   private timerTicker?: Phaser.Time.TimerEvent;
 
@@ -88,6 +94,8 @@ export class DragController {
     this.scene.input.off("pointerdown", this.handlePointerDown, this);
     this.scene.input.off("pointermove", this.handlePointerMove, this);
     this.scene.input.off("pointerup", this.handlePointerUp, this);
+    this.holdTimer?.remove(false);
+    this.holdTimer = undefined;
     this.dragTimer?.remove(false);
     this.dragTimer = undefined;
     this.timerTicker?.remove(false);
@@ -105,11 +113,13 @@ export class DragController {
     }
 
     const unit = this.board.getUnitAt(cell.x, cell.y);
-    if (!unit || unit.team !== "ally") {
+    if (!unit) {
       return;
     }
 
+    this.clearSelection();
     this.selectedUnitId = unit.id;
+    this.pressedCell = { ...cell };
     this.pointerCell = { ...cell };
     this.blockedDirection = null;
     this.blockedCell = null;
@@ -120,37 +130,23 @@ export class DragController {
       cell,
       kind: "idle"
     });
-    this.callbacks.onStatus(`Selected ${unit.id}. You have 5 seconds to drag.`);
-    this.dragTimer?.remove(false);
-    this.timerTicker?.remove(false);
     this.callbacks.onTimerChange({
-      active: true,
-      remainingMs: DragController.DRAG_DURATION_MS,
+      active: false,
+      remainingMs: 0,
       totalMs: DragController.DRAG_DURATION_MS
     });
-    this.dragTimer = this.scene.time.delayedCall(DragController.DRAG_DURATION_MS, () => {
-      this.finalizeDrag("Time ended. Resolving current board state.");
-    });
-    this.timerTicker = this.scene.time.addEvent({
-      delay: 50,
-      loop: true,
-      callback: () => {
-        if (!this.dragTimer) {
-          return;
-        }
-
-        const remainingMs = Math.max(0, this.dragTimer.getRemaining());
-        this.callbacks.onTimerChange({
-          active: true,
-          remainingMs,
-          totalMs: DragController.DRAG_DURATION_MS
-        });
+    this.callbacks.onStatus(
+      unit.team === "ally"
+        ? `Selected ${unit.id}. Drag to start the 5 second move timer or hold 1.5 seconds for details.`
+        : `Selected ${unit.id}. Hold 1.5 seconds for details.`
+    );
+    this.holdTimer = this.scene.time.delayedCall(DragController.HOLD_TO_INSPECT_MS, () => {
+      if (!this.selectedUnitId || this.selectedUnitId !== unit.id || !this.pressedCell) {
+        return;
       }
-    });
-    debugDragStart({
-      unitId: unit.id,
-      startCell: cell,
-      durationMs: DragController.DRAG_DURATION_MS
+
+      this.inspectingUnitId = unit.id;
+      this.callbacks.onInspect({ unitId: unit.id });
     });
   }
 
@@ -166,6 +162,8 @@ export class DragController {
 
     const targetCell = this.boardView.worldToGrid(pointer.worldX, pointer.worldY);
     if (!targetCell) {
+      this.holdTimer?.remove(false);
+      this.holdTimer = undefined;
       this.blockedDirection = null;
       this.blockedCell = null;
       this.callbacks.onPreview({
@@ -175,6 +173,32 @@ export class DragController {
         kind: "idle"
       });
       return;
+    }
+
+    if (this.inspectingUnitId) {
+      return;
+    }
+
+    if (!this.dragTimer) {
+      if (this.pressedCell && this.pressedCell.x === targetCell.x && this.pressedCell.y === targetCell.y) {
+        this.callbacks.onPreview({
+          unitId: this.selectedUnitId,
+          pointerWorld: { x: pointer.worldX, y: pointer.worldY },
+          cell: targetCell,
+          kind: "idle"
+        });
+        return;
+      }
+
+      this.holdTimer?.remove(false);
+      this.holdTimer = undefined;
+
+      if (activeUnit.team !== "ally") {
+        this.callbacks.onStatus(`Enemy ${activeUnit.id} cannot be dragged. Hold on the tile to inspect.`);
+        return;
+      }
+
+      this.startDrag(activeUnit.id, this.pressedCell ?? activeUnit.gridPos);
     }
 
     if (this.blockedDirection) {
@@ -213,11 +237,11 @@ export class DragController {
       result.kind === "block" ? { ...result.activePosition } : { ...targetCell };
     this.blockedDirection =
       result.kind === "block"
-      ? {
-          x: Math.sign(targetCell.x - result.activePosition.x),
-          y: Math.sign(targetCell.y - result.activePosition.y)
-        }
-      : null;
+        ? {
+            x: Math.sign(targetCell.x - result.activePosition.x),
+            y: Math.sign(targetCell.y - result.activePosition.y)
+          }
+        : null;
     this.blockedCell = result.kind === "block" ? { ...targetCell } : null;
     this.handleInteractionResult(result, targetCell);
     const previewWorld =
@@ -238,6 +262,14 @@ export class DragController {
   }
 
   private handlePointerUp(): void {
+    this.holdTimer?.remove(false);
+    this.holdTimer = undefined;
+
+    if (this.inspectingUnitId || !this.dragTimer) {
+      this.clearSelection();
+      return;
+    }
+
     if (!this.selectedUnitId) {
       return;
     }
@@ -374,9 +406,13 @@ export class DragController {
 
   private clearSelection(): void {
     this.selectedUnitId = null;
+    this.pressedCell = null;
     this.pointerCell = null;
     this.blockedDirection = null;
     this.blockedCell = null;
+    this.inspectingUnitId = null;
+    this.holdTimer?.remove(false);
+    this.holdTimer = undefined;
     this.dragTimer?.remove(false);
     this.dragTimer = undefined;
     this.timerTicker?.remove(false);
@@ -395,4 +431,38 @@ export class DragController {
     this.callbacks.onSelectionChange(null);
   }
 
+  private startDrag(unitId: string, startCell: Vec2): void {
+    this.callbacks.onStatus(`Selected ${unitId}. You have 5 seconds to drag.`);
+    this.dragTimer?.remove(false);
+    this.timerTicker?.remove(false);
+    this.callbacks.onTimerChange({
+      active: true,
+      remainingMs: DragController.DRAG_DURATION_MS,
+      totalMs: DragController.DRAG_DURATION_MS
+    });
+    this.dragTimer = this.scene.time.delayedCall(DragController.DRAG_DURATION_MS, () => {
+      this.finalizeDrag("Time ended. Resolving current board state.");
+    });
+    this.timerTicker = this.scene.time.addEvent({
+      delay: 50,
+      loop: true,
+      callback: () => {
+        if (!this.dragTimer) {
+          return;
+        }
+
+        const remainingMs = Math.max(0, this.dragTimer.getRemaining());
+        this.callbacks.onTimerChange({
+          active: true,
+          remainingMs,
+          totalMs: DragController.DRAG_DURATION_MS
+        });
+      }
+    });
+    debugDragStart({
+      unitId,
+      startCell,
+      durationMs: DragController.DRAG_DURATION_MS
+    });
+  }
 }

@@ -1,13 +1,14 @@
 # Implementation Status
 
 ## 1. Current Phase
-- 현재 단계: **Phase B-3 (데이터 스키마 갱신)**
+- 현재 단계: **Phase C-2 (전투/이동 피드백 강화)**
 - 기준 날짜: **2026-03-20**
 - 요약:
   - 코어 규칙(이동/밀림/전투/하자드), 드래그 상호작용, 최소 적 AI, 데이터 로더/스키마 검증, 다중 스테이지+대화 기본 루프가 동작한다.
   - objective 판정은 `defeat_all`, `survive_n_turns`, `reach_cell`, `protect_unit`를 지원하고, stage 결과에 따라 `onSuccess` / `onFail` 분기 전이가 가능하다.
   - debug scenario는 성공 분기와 실패 분기를 모두 포함하며, stage 실패 시 retry/title 또는 fail branch로 이어지는 플로우가 정리되었다.
   - `stage` / `scenario` / `dialog` / `unit catalog` JSON은 로더 시점에 schema 검증과 참조 검증을 거치며, `reach_cell` 샘플 스테이지가 추가되었다.
+  - 전투 보드에서 아군 드래그 타이머는 타일 이동이 시작될 때만 켜지고, 아군/적군 타일 롱프레스 1.5초로 유닛 상세 오버레이를 열 수 있다.
 
 ## 2. Completed
 - 프로젝트 기반(Phaser + Vite + TypeScript) 및 기본 Scene 구조 구축 완료
@@ -43,6 +44,9 @@
   - `stage-02`에 `protect_unit` objective 반영
   - `stage-reach-cell` 샘플 스테이지 추가
   - `Phase_Plan_dev.md` 작성
+- 전투/이동 피드백 1차 반영 완료
+  - 아군 드래그 타이머가 `pointerdown` 즉시 시작되지 않고 실제 타일 이동부터 5초 카운트다운 시작
+  - 아군/적군 타일 1.5초 롱프레스로 유닛 상세 오버레이 표시
 - 검증 상태 (최신 기준)
   - 단위 테스트: **57 passed**
   - 테스트 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run test`
@@ -50,11 +54,10 @@
   - 빌드 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run build`
 
 ## 3. In Progress
-- 없음
+- Phase C-2 잔여 작업: swap / sandwich / 피격 / 사망 연출의 우선순위와 타이밍 큐 정리
 
 ## 4. Not Started
 - 대화 UI 고도화(로그/스킵/자동재생 등)
-- 전투/이동 피드백 강화(연출 우선순위/큐 정리)
 - 화면/해상도 품질 재점검
 - 콘텐츠 제작 파이프라인(템플릿/밸런싱 루프)
 - 스킬 시스템(행동 타입/쿨다운/효과 규칙)
@@ -77,12 +80,14 @@
 - stage step 전이는 `onSuccess` / `onFail` 우선, dialogue step 전이는 `nextStepId`를 사용한다.
 - `protect_unit`은 지정 유닛이 보드에서 사라지면 즉시 실패한다.
 - JSON schema 검증은 로더 시점에 수행하고, schema 오류와 scenario branch 참조 오류를 함께 보고한다.
+- 전투 보드 입력은 `같은 타일 1.5초 유지 = 상세`, `다른 타일로 이동 시작 = 5초 드래그 타이머 시작`으로 분기한다.
 
 ## 6. Open Questions
+- 로드맵 순서상 다음 기본 복귀 지점을 `Phase C-1` 대화 UI로 둘지, 사용자 요청 기반으로 `Phase C-2` 세부 보강을 더 이어갈지
 - 대화 UI 고도화를 Phase C-1에서 어디까지 MVP 범위로 둘지
 - `stage-reach-cell`을 실제 debug scenario 흐름에 연결할지, 별도 테스트/샘플 자산으로 유지할지
 
 ## 7. Next Action
-1. **대화 UI MVP 범위 확정 및 상태 구조 정리** (`log` / `skip` / `auto-play` 중 우선 구현 단위를 정하고 `UIScene`/registry 상태를 정리)
-2. **대화 진행 UX 1차 구현** (현재 dialogue overlay에 `skip` 또는 `auto-play` 중 최소 1개를 실제 동작으로 연결)
+1. **로드맵 순서 복귀 시 `Phase C-1` 대화 UI MVP 범위 확정** (`log` / `skip` / `auto-play` 중 우선 구현 단위를 정하고 `UIScene`/registry 상태를 정리)
+2. **사용자 요청 흐름을 더 잇는다면 `Phase C-2` 연출 우선순위 정리** (swap / block / hit / die 큐의 겹침과 타이밍 충돌을 줄이는 보강)
 3. **모바일/포인터 기반 대화 입력 정리** (SPACE 외 입력 경로를 단순화하고 실수 입력을 줄이는 방향으로 보강)

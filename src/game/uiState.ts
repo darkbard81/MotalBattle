@@ -18,7 +18,11 @@ export const UI_STATE_KEYS = {
   headerTimer: "ui.headerTimer",
   statusMessage: "ui.statusMessage",
   battleSummary: "ui.battleSummary",
-  selectedUnitId: "ui.selectedUnitId"
+  selectedUnitId: "ui.selectedUnitId",
+  unitDetailVisible: "ui.unitDetailVisible",
+  unitDetailTitle: "ui.unitDetailTitle",
+  unitDetailBody: "ui.unitDetailBody",
+  unitDetailHint: "ui.unitDetailHint"
 } as const;
 
 export const DEFAULT_UI_STATE = {
@@ -41,5 +45,9 @@ export const DEFAULT_UI_STATE = {
   [UI_STATE_KEYS.headerTimer]: "5.00s",
   [UI_STATE_KEYS.statusMessage]: "Ready: drag an ally. Battle resolves on release or after 5 seconds.",
   [UI_STATE_KEYS.battleSummary]: "Battles: 0. Defeated: none",
-  [UI_STATE_KEYS.selectedUnitId]: "-"
+  [UI_STATE_KEYS.selectedUnitId]: "-",
+  [UI_STATE_KEYS.unitDetailVisible]: false,
+  [UI_STATE_KEYS.unitDetailTitle]: "",
+  [UI_STATE_KEYS.unitDetailBody]: "",
+  [UI_STATE_KEYS.unitDetailHint]: "Click to close"
 } as const;

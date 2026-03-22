@@ -6,6 +6,7 @@ import { DEFAULT_UI_STATE, UI_STATE_KEYS } from "../../game/uiState";
 export class UIScene extends Phaser.Scene {
   static readonly KEY = "UIScene";
   static readonly FLOW_ACTION_EVENT = "ui:flow-action";
+  static readonly UNIT_DETAIL_CLOSE_EVENT = "ui:unit-detail-close";
   private scenarioTitleText?: Phaser.GameObjects.Text;
   private stageTitleText?: Phaser.GameObjects.Text;
   private headerHintText?: Phaser.GameObjects.Text;
@@ -27,6 +28,10 @@ export class UIScene extends Phaser.Scene {
   private flowPrimaryButton?: Phaser.GameObjects.Container;
   private flowSecondaryButton?: Phaser.GameObjects.Container;
   private flowTertiaryButton?: Phaser.GameObjects.Container;
+  private unitDetailOverlay?: Phaser.GameObjects.Container;
+  private unitDetailTitleText?: Phaser.GameObjects.Text;
+  private unitDetailBodyText?: Phaser.GameObjects.Text;
+  private unitDetailHintText?: Phaser.GameObjects.Text;
 
   constructor() {
     super(UIScene.KEY);
@@ -104,6 +109,7 @@ export class UIScene extends Phaser.Scene {
 
     this.createDialogueOverlay();
     this.createFlowOverlay();
+    this.createUnitDetailOverlay();
 
     this.registry.events.on(`changedata-${UI_STATE_KEYS.flowPanelVisible}`, this.handleFlowPanelVisible, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.flowPanelTitle}`, this.handleFlowPanelTitle, this);
@@ -125,6 +131,10 @@ export class UIScene extends Phaser.Scene {
     this.registry.events.on(`changedata-${UI_STATE_KEYS.statusMessage}`, this.handleStatusMessage, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.battleSummary}`, this.handleBattleSummary, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.selectedUnitId}`, this.handleSelectedUnit, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.unitDetailVisible}`, this.handleUnitDetailVisible, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.unitDetailTitle}`, this.handleUnitDetailTitle, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.unitDetailBody}`, this.handleUnitDetailBody, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.unitDetailHint}`, this.handleUnitDetailHint, this);
 
     this.handleFlowPanelVisible(this.registry, this.registry.get(UI_STATE_KEYS.flowPanelVisible));
     this.handleFlowPanelTitle(this.registry, this.registry.get(UI_STATE_KEYS.flowPanelTitle));
@@ -146,6 +156,10 @@ export class UIScene extends Phaser.Scene {
     this.handleStatusMessage(this.registry, this.registry.get(UI_STATE_KEYS.statusMessage));
     this.handleBattleSummary(this.registry, this.registry.get(UI_STATE_KEYS.battleSummary));
     this.handleSelectedUnit(this.registry, this.registry.get(UI_STATE_KEYS.selectedUnitId));
+    this.handleUnitDetailVisible(this.registry, this.registry.get(UI_STATE_KEYS.unitDetailVisible));
+    this.handleUnitDetailTitle(this.registry, this.registry.get(UI_STATE_KEYS.unitDetailTitle));
+    this.handleUnitDetailBody(this.registry, this.registry.get(UI_STATE_KEYS.unitDetailBody));
+    this.handleUnitDetailHint(this.registry, this.registry.get(UI_STATE_KEYS.unitDetailHint));
   }
 
   private createDialogueOverlay(): void {
@@ -243,6 +257,48 @@ export class UIScene extends Phaser.Scene {
       this.flowPrimaryButton,
       this.flowSecondaryButton,
       this.flowTertiaryButton
+    ]);
+  }
+
+  private createUnitDetailOverlay(): void {
+    this.unitDetailOverlay = this.add.container(0, 0).setDepth(1050).setVisible(false).setScrollFactor(0);
+    const centerX = GAME_WIDTH / 2;
+    const centerY = GAME_HEIGHT / 2;
+    const backdrop = this.add.rectangle(centerX, centerY, GAME_WIDTH, GAME_HEIGHT, 0x020617, 0.72);
+    backdrop.setInteractive({ useHandCursor: true });
+    backdrop.on("pointerdown", () => {
+      this.game.events.emit(UIScene.UNIT_DETAIL_CLOSE_EVENT);
+    });
+
+    const panel = this.add.rectangle(centerX, centerY, 540, 380, 0x111827, 0.98);
+    panel.setStrokeStyle(2, 0x475569, 1);
+
+    this.unitDetailTitleText = this.add.text(centerX - 230, centerY - 150, "", {
+      color: "#f8fafc",
+      fontFamily: "monospace",
+      fontSize: "24px"
+    });
+
+    this.unitDetailBodyText = this.add.text(centerX - 230, centerY - 102, "", {
+      color: "#cbd5e1",
+      fontFamily: "monospace",
+      fontSize: "18px",
+      lineSpacing: 10,
+      wordWrap: { width: 460 }
+    });
+
+    this.unitDetailHintText = this.add.text(centerX + 230, centerY + 150, "", {
+      color: "#94a3b8",
+      fontFamily: "monospace",
+      fontSize: "13px"
+    }).setOrigin(1, 1);
+
+    this.unitDetailOverlay.add([
+      backdrop,
+      panel,
+      this.unitDetailTitleText,
+      this.unitDetailBodyText,
+      this.unitDetailHintText
     ]);
   }
 
@@ -408,6 +464,22 @@ export class UIScene extends Phaser.Scene {
     this.selectedUnitText?.setText(`Selected: ${value}`);
   }
 
+  private handleUnitDetailVisible(_parent: unknown, value: boolean): void {
+    this.unitDetailOverlay?.setVisible(!!value);
+  }
+
+  private handleUnitDetailTitle(_parent: unknown, value: string): void {
+    this.unitDetailTitleText?.setText(value ?? "");
+  }
+
+  private handleUnitDetailBody(_parent: unknown, value: string): void {
+    this.unitDetailBodyText?.setText(value ?? "");
+  }
+
+  private handleUnitDetailHint(_parent: unknown, value: string): void {
+    this.unitDetailHintText?.setText(value ?? "");
+  }
+
   shutdown(): void {
     this.registry.events.off(`changedata-${UI_STATE_KEYS.flowPanelVisible}`, this.handleFlowPanelVisible, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.flowPanelTitle}`, this.handleFlowPanelTitle, this);
@@ -429,5 +501,9 @@ export class UIScene extends Phaser.Scene {
     this.registry.events.off(`changedata-${UI_STATE_KEYS.statusMessage}`, this.handleStatusMessage, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.battleSummary}`, this.handleBattleSummary, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.selectedUnitId}`, this.handleSelectedUnit, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.unitDetailVisible}`, this.handleUnitDetailVisible, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.unitDetailTitle}`, this.handleUnitDetailTitle, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.unitDetailBody}`, this.handleUnitDetailBody, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.unitDetailHint}`, this.handleUnitDetailHint, this);
   }
 }

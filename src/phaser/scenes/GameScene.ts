@@ -51,6 +51,7 @@ export class GameScene extends Phaser.Scene {
   private currentTurn = 0;
   private currentObjectiveStatus: ObjectiveStatus = "ongoing";
   private pendingTransition = false;
+  private unitDetailVisible = false;
   private flowActions: Partial<Record<"primary" | "secondary" | "tertiary", () => void>> = {};
   private currentPreview:
     | {
@@ -76,6 +77,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.bindDialogueAdvanceInput();
     this.game.events.on(UIScene.FLOW_ACTION_EVENT, this.handleFlowAction, this);
+    this.game.events.on(UIScene.UNIT_DETAIL_CLOSE_EVENT, this.hideUnitDetail, this);
 
     const startingStep = getStartingStep(this.scenarioDefinition.scenario);
     this.enterScenarioStep(startingStep);
@@ -151,6 +153,9 @@ export class GameScene extends Phaser.Scene {
         this.selectedUnitId = unitId;
         this.registry.set(UI_STATE_KEYS.selectedUnitId, unitId ?? "-");
         this.syncUnitViews();
+      },
+      onInspect: ({ unitId }) => {
+        this.showUnitDetail(unitId);
       },
       onStatus: (message) => {
         this.updateStatus(message);
@@ -272,6 +277,11 @@ export class GameScene extends Phaser.Scene {
 
   private bindDialogueAdvanceInput(): void {
     this.input.on("pointerdown", () => {
+      if (this.unitDetailVisible) {
+        this.hideUnitDetail();
+        return;
+      }
+
       this.advanceDialogue();
     });
     this.input.keyboard?.on("keydown-SPACE", () => {
@@ -345,8 +355,54 @@ export class GameScene extends Phaser.Scene {
     this.selectedUnitId = null;
     this.activeSwapAnimation = undefined;
     this.currentPreview = undefined;
+    this.hideUnitDetail();
     this.dyingUnitIds.clear();
     this.animationQueue.clear();
+  }
+
+  private showUnitDetail(unitId: string): void {
+    if (!this.board) {
+      return;
+    }
+
+    const unit = this.board.getUnit(unitId);
+    const unitData = this.unitCatalog[unitId];
+    if (!unit || !unitData) {
+      return;
+    }
+
+    this.unitDetailVisible = true;
+    this.registry.set(UI_STATE_KEYS.unitDetailVisible, true);
+    this.registry.set(
+      UI_STATE_KEYS.unitDetailTitle,
+      `${unitData.name} (${unit.team === "ally" ? "ALLY" : "ENEMY"})`
+    );
+    this.registry.set(
+      UI_STATE_KEYS.unitDetailBody,
+      [
+        `ID: ${unit.id}`,
+        `Position: (${unit.gridPos.x}, ${unit.gridPos.y})`,
+        `HP: ${unit.hp}/${unit.maxHp}`,
+        `ATK / DEF: ${unit.atk} / ${unit.def}`,
+        `Weight: ${unit.weight}`,
+        `Pushable: ${unit.canBePushed ? "Yes" : "No"}`,
+        `State: moved=${unit.state.hasMoved ? "Y" : "N"}, acted=${unit.state.hasActed ? "Y" : "N"}, stunned=${unit.state.stunned ? "Y" : "N"}`
+      ].join("\n")
+    );
+    this.registry.set(UI_STATE_KEYS.unitDetailHint, "Click anywhere to close");
+    this.updateStatus(`${unitData.name} detail open.`);
+  }
+
+  private hideUnitDetail(): void {
+    if (!this.unitDetailVisible) {
+      return;
+    }
+
+    this.unitDetailVisible = false;
+    this.registry.set(UI_STATE_KEYS.unitDetailVisible, false);
+    this.registry.set(UI_STATE_KEYS.unitDetailTitle, "");
+    this.registry.set(UI_STATE_KEYS.unitDetailBody, "");
+    this.registry.set(UI_STATE_KEYS.unitDetailHint, "Click to close");
   }
 
   private evaluateCurrentObjectiveStatus(): ObjectiveStatus {
