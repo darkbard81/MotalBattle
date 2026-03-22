@@ -13,10 +13,17 @@ import {
   debugBattleResult,
   debugDragStart,
   debugDragStep,
-  debugEnemyTurn
+  debugEnemyTurn,
+  debugSwapStep
 } from "../../game/debug";
 import { BoardView } from "../objects/BoardView";
-import { getBlockedPreviewWorld, isPointerOnBlockedCell } from "./dragPreview";
+import {
+  getDiagonalSwapCandidate,
+  getFloatingPreviewWorld,
+  getNextFloatingCell,
+  shouldReleaseBlockedAxis,
+  type BlockedAxisLock
+} from "./dragPreview";
 
 interface DragControllerCallbacks {
   onSelectionChange: (unitId: string | null) => void;
@@ -60,14 +67,21 @@ interface DragControllerCallbacks {
 }
 
 export class DragController {
-  private static readonly DRAG_DURATION_MS = 5000;
+  private static readonly DRAG_DURATION_MS = 50000;
   private static readonly HOLD_TO_INSPECT_MS = 1500;
+  private static readonly SWAP_REARM_INTENT_RATIO = 0.2;
 
   private selectedUnitId: string | null = null;
   private pressedCell: Vec2 | null = null;
-  private pointerCell: Vec2 | null = null;
-  private blockedDirection: Vec2 | null = null;
-  private blockedCell: Vec2 | null = null;
+  private blockedAxisLock: BlockedAxisLock | null = null;
+  private swapLock:
+    | {
+        blockedCell: Vec2;
+        directionX: -1 | 0 | 1;
+        directionY: -1 | 0 | 1;
+        axisMode: "x" | "y" | "xy";
+      }
+    | null = null;
   private inspectingUnitId: string | null = null;
   private holdTimer?: Phaser.Time.TimerEvent;
   private dragTimer?: Phaser.Time.TimerEvent;
@@ -120,9 +134,8 @@ export class DragController {
     this.clearSelection();
     this.selectedUnitId = unit.id;
     this.pressedCell = { ...cell };
-    this.pointerCell = { ...cell };
-    this.blockedDirection = null;
-    this.blockedCell = null;
+    this.blockedAxisLock = null;
+    this.swapLock = null;
     this.callbacks.onSelectionChange(this.selectedUnitId);
     this.callbacks.onPreview({
       unitId: unit.id,
@@ -160,31 +173,28 @@ export class DragController {
       return;
     }
 
-    const targetCell = this.boardView.worldToGrid(pointer.worldX, pointer.worldY);
-    if (!targetCell) {
-      this.holdTimer?.remove(false);
-      this.holdTimer = undefined;
-      this.blockedDirection = null;
-      this.blockedCell = null;
-      this.callbacks.onPreview({
-        unitId: this.selectedUnitId,
-        pointerWorld: { x: pointer.worldX, y: pointer.worldY },
-        cell: null,
-        kind: "idle"
-      });
-      return;
-    }
-
     if (this.inspectingUnitId) {
       return;
     }
 
+    const pointerWorld = { x: pointer.worldX, y: pointer.worldY };
+    const hoveredCell = this.boardView.worldToGrid(pointer.worldX, pointer.worldY);
+
     if (!this.dragTimer) {
-      if (this.pressedCell && this.pressedCell.x === targetCell.x && this.pressedCell.y === targetCell.y) {
+      if (
+        hoveredCell &&
+        this.pressedCell &&
+        this.pressedCell.x === hoveredCell.x &&
+        this.pressedCell.y === hoveredCell.y
+      ) {
         this.callbacks.onPreview({
           unitId: this.selectedUnitId,
-          pointerWorld: { x: pointer.worldX, y: pointer.worldY },
-          cell: targetCell,
+          pointerWorld: getFloatingPreviewWorld(
+            pointerWorld,
+            this.boardView.gridToWorld(activeUnit.gridPos.x, activeUnit.gridPos.y),
+            this.boardView.tileSize
+          ),
+          cell: hoveredCell,
           kind: "idle"
         });
         return;
@@ -201,62 +211,88 @@ export class DragController {
       this.startDrag(activeUnit.id, this.pressedCell ?? activeUnit.gridPos);
     }
 
-    if (this.blockedDirection) {
-      if (isPointerOnBlockedCell(targetCell, this.blockedCell)) {
-        const previewWorld = getBlockedPreviewWorld(
-          { x: pointer.worldX, y: pointer.worldY },
-          this.boardView.gridToWorld(activeUnit.gridPos.x, activeUnit.gridPos.y),
-          this.blockedDirection,
-          this.boardView.tileSize
-        );
-        this.callbacks.onPreview({
-          unitId: this.selectedUnitId,
-          pointerWorld: previewWorld,
-          cell: targetCell,
-          kind: "block"
-        });
-        return;
-      }
-
-      this.blockedDirection = null;
-      this.blockedCell = null;
+    if (
+      this.blockedAxisLock &&
+      shouldReleaseBlockedAxis(pointerWorld, this.blockedAxisLock, {
+        originX: this.boardView.originX,
+        originY: this.boardView.originY,
+        tileSize: this.boardView.tileSize
+      })
+    ) {
+      this.blockedAxisLock = null;
     }
 
-    if (this.pointerCell && this.pointerCell.x === targetCell.x && this.pointerCell.y === targetCell.y) {
+    const activePosition = { ...activeUnit.gridPos };
+    const activeWorld = this.boardView.gridToWorld(activePosition.x, activePosition.y);
+    if (this.swapLock && this.shouldReleaseSwapLock(pointerWorld, activeWorld)) {
+      this.swapLock = null;
+    }
+    const pointerGridConfig = {
+      originX: this.boardView.originX,
+      originY: this.boardView.originY,
+      tileSize: this.boardView.tileSize
+    };
+    const diagonalSwapTarget = getDiagonalSwapCandidate(
+      this.board,
+      activePosition,
+      activeWorld,
+      pointerWorld,
+      this.boardView.tileSize,
+      this.blockedAxisLock
+    );
+    const nextCell =
+      (this.isSwapLocked(diagonalSwapTarget) ? null : diagonalSwapTarget) ??
+      getNextFloatingCell(
+        pointerWorld,
+        activePosition,
+        activeWorld,
+        pointerGridConfig,
+        this.blockedAxisLock
+      );
+
+    if (!nextCell) {
       this.callbacks.onPreview({
         unitId: this.selectedUnitId,
-        pointerWorld: { x: pointer.worldX, y: pointer.worldY },
-        cell: targetCell,
-        kind: "idle"
+        pointerWorld: getFloatingPreviewWorld(
+          pointerWorld,
+          activeWorld,
+          this.boardView.tileSize,
+          this.blockedAxisLock
+        ),
+        cell: hoveredCell ?? activePosition,
+        kind: this.blockedAxisLock ? "block" : "idle"
       });
       return;
     }
 
-    const result = this.interactionResolver.step(this.board, this.selectedUnitId, targetCell);
-    this.pointerCell =
-      result.kind === "block" ? { ...result.activePosition } : { ...targetCell };
-    this.blockedDirection =
+    const result = this.interactionResolver.step(this.board, this.selectedUnitId, nextCell);
+    this.blockedAxisLock =
       result.kind === "block"
         ? {
-            x: Math.sign(targetCell.x - result.activePosition.x),
-            y: Math.sign(targetCell.y - result.activePosition.y)
+            axis: nextCell.x !== activePosition.x ? "x" : "y",
+            direction:
+              nextCell.x !== activePosition.x
+                ? (Math.sign(nextCell.x - activePosition.x) as -1 | 1)
+                : (Math.sign(nextCell.y - activePosition.y) as -1 | 1),
+            blockedCell: { ...nextCell }
           }
         : null;
-    this.blockedCell = result.kind === "block" ? { ...targetCell } : null;
-    this.handleInteractionResult(result, targetCell);
-    const previewWorld =
-      result.kind === "block"
-        ? getBlockedPreviewWorld(
-            { x: pointer.worldX, y: pointer.worldY },
-            this.boardView.gridToWorld(result.activePosition.x, result.activePosition.y),
-            this.blockedDirection ?? { x: 0, y: 0 },
-            this.boardView.tileSize
-          )
-        : { x: pointer.worldX, y: pointer.worldY };
+    this.swapLock =
+      result.kind === "swap"
+        ? this.createSwapLock(activePosition, nextCell)
+        : this.swapLock;
+    this.handleInteractionResult(result, nextCell);
+
+    const previewWorld = getFloatingPreviewWorld(
+      pointerWorld,
+      this.boardView.gridToWorld(result.activePosition.x, result.activePosition.y),
+      this.boardView.tileSize,
+      this.blockedAxisLock
+    );
     this.callbacks.onPreview({
       unitId: this.selectedUnitId,
       pointerWorld: previewWorld,
-      cell: targetCell,
+      cell: result.kind === "block" ? nextCell : result.activePosition,
       kind: result.kind === "none" ? "idle" : result.kind
     });
   }
@@ -302,6 +338,8 @@ export class DragController {
             ? "Cannot move: unit is stunned."
             : result.reason === "UNIT_ALREADY_ACTED"
               ? "Cannot move: unit has already acted."
+              : result.reason === "OUT_OF_BOUNDS"
+                ? "Cannot move outside the board."
               : "Blocked by obstacle tile."
       );
       return;
@@ -320,6 +358,19 @@ export class DragController {
     }
 
     if (result.swappedUnitId && result.swappedFrom && result.swappedTo) {
+      const swapDirection = {
+        x: result.swappedTo.x - result.swappedFrom.x,
+        y: result.swappedTo.y - result.swappedFrom.y
+      };
+      debugSwapStep({
+        activeUnitId: result.activeUnitId,
+        swappedUnitId: result.swappedUnitId,
+        swappedFrom: result.swappedFrom,
+        swappedTo: result.swappedTo,
+        direction: swapDirection,
+        timestampIso: new Date().toISOString(),
+        timestampMs: this.scene.time.now
+      });
       debugDragStep({
         unitId: result.activeUnitId,
         targetCell,
@@ -407,9 +458,8 @@ export class DragController {
   private clearSelection(): void {
     this.selectedUnitId = null;
     this.pressedCell = null;
-    this.pointerCell = null;
-    this.blockedDirection = null;
-    this.blockedCell = null;
+    this.blockedAxisLock = null;
+    this.swapLock = null;
     this.inspectingUnitId = null;
     this.holdTimer?.remove(false);
     this.holdTimer = undefined;
@@ -429,6 +479,71 @@ export class DragController {
       totalMs: DragController.DRAG_DURATION_MS
     });
     this.callbacks.onSelectionChange(null);
+  }
+
+  private isSwapLocked(candidate: Vec2 | null): boolean {
+    if (!candidate || !this.swapLock) {
+      return false;
+    }
+
+    return (
+      candidate.x === this.swapLock.blockedCell.x &&
+      candidate.y === this.swapLock.blockedCell.y
+    );
+  }
+
+  private shouldReleaseSwapLock(pointerWorld: Vec2, activeWorld: Vec2): boolean {
+    if (!this.swapLock) {
+      return true;
+    }
+
+    const minIntent =
+      this.boardView.tileSize * DragController.SWAP_REARM_INTENT_RATIO;
+    const offsetX = pointerWorld.x - activeWorld.x;
+    const offsetY = pointerWorld.y - activeWorld.y;
+    if (this.swapLock.axisMode === "x") {
+      if (Math.abs(offsetX) < minIntent) {
+        return true;
+      }
+
+      return Math.sign(offsetX) !== this.swapLock.directionX;
+    }
+
+    if (this.swapLock.axisMode === "y") {
+      if (Math.abs(offsetY) < minIntent) {
+        return true;
+      }
+
+      return Math.sign(offsetY) !== this.swapLock.directionY;
+    }
+
+    if (Math.abs(offsetX) < minIntent || Math.abs(offsetY) < minIntent) {
+      return true;
+    }
+
+    return (
+      Math.sign(offsetX) !== this.swapLock.directionX ||
+      Math.sign(offsetY) !== this.swapLock.directionY
+    );
+  }
+
+  private createSwapLock(activePosition: Vec2, nextCell: Vec2): {
+    blockedCell: Vec2;
+    directionX: -1 | 0 | 1;
+    directionY: -1 | 0 | 1;
+    axisMode: "x" | "y" | "xy";
+  } {
+    const directionX = Math.sign(activePosition.x - nextCell.x) as -1 | 0 | 1;
+    const directionY = Math.sign(activePosition.y - nextCell.y) as -1 | 0 | 1;
+    const axisMode =
+      directionX !== 0 && directionY !== 0 ? "xy" : directionX !== 0 ? "x" : "y";
+
+    return {
+      blockedCell: { ...activePosition },
+      directionX,
+      directionY,
+      axisMode
+    };
   }
 
   private startDrag(unitId: string, startCell: Vec2): void {

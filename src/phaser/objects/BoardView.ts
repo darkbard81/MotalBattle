@@ -18,6 +18,7 @@ export class BoardView {
   readonly tileSize: number;
   readonly originX: number;
   readonly originY: number;
+  private readonly edgeDeadzoneInset: number;
   private readonly cornerDeadzoneRadius: number;
   private readonly highlight: Phaser.GameObjects.Rectangle;
   private backgroundImage?: Phaser.GameObjects.Image;
@@ -33,6 +34,7 @@ export class BoardView {
     this.tileSize = config.tileSize;
     this.originX = config.originX;
     this.originY = config.originY;
+    this.edgeDeadzoneInset = Math.max(8, Math.floor(this.tileSize * 0.08));
     this.cornerDeadzoneRadius = Math.max(10, Math.floor(this.tileSize * 0.12));
     this.highlight = this.scene.add.rectangle(0, 0, this.tileSize - 6, this.tileSize - 6);
     this.highlight.setStrokeStyle(3, 0x67e8f9, 0.9);
@@ -148,6 +150,16 @@ export class BoardView {
 
     const offsetX = localX - x * this.tileSize;
     const offsetY = localY - y * this.tileSize;
+    const edgeMaxOffset = this.tileSize - this.edgeDeadzoneInset;
+    if (
+      offsetX < this.edgeDeadzoneInset ||
+      offsetX > edgeMaxOffset ||
+      offsetY < this.edgeDeadzoneInset ||
+      offsetY > edgeMaxOffset
+    ) {
+      return null;
+    }
+
     const maxOffset = this.tileSize - this.cornerDeadzoneRadius;
     const inLeft = offsetX < this.cornerDeadzoneRadius;
     const inRight = offsetX > maxOffset;

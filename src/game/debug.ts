@@ -35,6 +35,18 @@ export function debugDragStep(payload: {
   debugEvent("drag", "step", payload);
 }
 
+export function debugSwapStep(payload: {
+  activeUnitId: string;
+  swappedUnitId: string;
+  swappedFrom: { x: number; y: number };
+  swappedTo: { x: number; y: number };
+  direction: { x: number; y: number };
+  timestampIso: string;
+  timestampMs: number;
+}): void {
+  debugEvent("drag", "swap", payload);
+}
+
 export function debugBattleResult(payload: {
   eventCount: number;
   hitTargetIds: string[];

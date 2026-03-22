@@ -169,16 +169,7 @@ export class GameScene extends Phaser.Scene {
         this.updateBattleSummary(summary);
         this.checkStageCompletion();
       },
-      onBlock: ({ cell }) => {
-        this.animationQueue.enqueue({
-          type: "block",
-          key: `block:${cell.x}:${cell.y}:${this.time.now}`,
-          duration: 100,
-          run: () => {
-            this.boardView?.flashCell(cell.x, cell.y, "block", 100);
-          }
-        });
-      },
+      onBlock: () => {},
       onBattleEvents: ({ playerBattleEvents, defeatedUnitIds, hazardTargetIds }) => {
         const allyBattleEvents = playerBattleEvents.filter((battleEvent) =>
           battleEvent.attackerIds.every((attackerId) => this.unitCatalog[attackerId]?.team === "ally")

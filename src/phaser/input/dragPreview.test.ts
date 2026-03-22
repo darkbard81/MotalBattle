@@ -1,45 +1,122 @@
 import { describe, expect, it } from "vitest";
-import { getBlockedPreviewWorld, isPointerOnBlockedCell } from "./dragPreview";
+import { createBoard, createUnit, placeUnit, setWall } from "../../core/__tests__/helpers";
+import {
+  getBlockedPreviewWorld,
+  getDiagonalSwapCandidate,
+  getFloatingPreviewWorld,
+  getNextFloatingCell,
+  getRawPointerCell,
+  shouldReleaseBlockedAxis
+} from "./dragPreview";
 
-describe("isPointerOnBlockedCell", () => {
-  it("returns true while the pointer stays on the blocked tile", () => {
-    expect(isPointerOnBlockedCell({ x: 2, y: 1 }, { x: 2, y: 1 })).toBe(true);
+describe("getRawPointerCell", () => {
+  it("tracks pointer cells even outside the board bounds", () => {
+    expect(getRawPointerCell({ x: 319, y: 191 }, { originX: 64, originY: 64, tileSize: 64 })).toEqual({
+      x: 3,
+      y: 1
+    });
+    expect(getRawPointerCell({ x: 20, y: 20 }, { originX: 64, originY: 64, tileSize: 64 })).toEqual({
+      x: -1,
+      y: -1
+    });
+  });
+});
+
+describe("shouldReleaseBlockedAxis", () => {
+  it("keeps a positive x-axis block until the pointer crosses back over the blocked edge", () => {
+    const lock = { axis: "x" as const, direction: 1 as const, blockedCell: { x: 2, y: 1 } };
+    const config = { originX: 0, originY: 0, tileSize: 128 };
+
+    expect(shouldReleaseBlockedAxis({ x: 300, y: 180 }, lock, config)).toBe(false);
+    expect(shouldReleaseBlockedAxis({ x: 255, y: 180 }, lock, config)).toBe(true);
+  });
+});
+
+describe("getNextFloatingCell", () => {
+  it("advances one orthogonal tile at a time toward the pointer intent", () => {
+    const nextCell = getNextFloatingCell(
+      { x: 420, y: 180 },
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { originX: 64, originY: 64, tileSize: 64 }
+    );
+
+    expect(nextCell).toEqual({ x: 2, y: 1 });
   });
 
-  it("returns false after the pointer leaves the blocked tile", () => {
-    expect(isPointerOnBlockedCell({ x: 2, y: 0 }, { x: 2, y: 1 })).toBe(false);
-    expect(isPointerOnBlockedCell(null, { x: 2, y: 1 })).toBe(false);
+  it("ignores the blocked axis and keeps the free axis moving", () => {
+    const nextCell = getNextFloatingCell(
+      { x: 420, y: 260 },
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { originX: 64, originY: 64, tileSize: 64 },
+      { axis: "x", direction: 1, blockedCell: { x: 2, y: 1 } }
+    );
+
+    expect(nextCell).toEqual({ x: 1, y: 2 });
+  });
+});
+
+describe("getFloatingPreviewWorld", () => {
+  it("clamps the floating preview to the active cell when the pointer is far away", () => {
+    const preview = getFloatingPreviewWorld({ x: 420, y: 20 }, { x: 256, y: 256 }, 128);
+
+    expect(preview).toEqual({ x: 320, y: 192 });
+  });
+
+  it("keeps a horizontal block offset while following free-axis movement", () => {
+    const preview = getFloatingPreviewWorld(
+      { x: 340, y: 520 },
+      { x: 256, y: 256 },
+      128,
+      { axis: "x", direction: 1, blockedCell: { x: 2, y: 1 } }
+    );
+
+    expect(preview).toEqual({ x: 300.8, y: 320 });
   });
 });
 
 describe("getBlockedPreviewWorld", () => {
-  it("keeps a horizontal block offset while following vertical pointer movement", () => {
-    const preview = getBlockedPreviewWorld(
-      { x: 340, y: 520 },
-      { x: 256, y: 256 },
-      { x: 1, y: 0 },
-      128
+  it("keeps backward compatibility for blocked preview helpers", () => {
+    expect(getBlockedPreviewWorld({ x: 420, y: 120 }, { x: 256, y: 256 }, { x: 0, y: -1 }, 128)).toEqual({
+      x: 320,
+      y: 211.2
+    });
+  });
+});
+
+describe("getDiagonalSwapCandidate", () => {
+  it("allows a rough diagonal swap when the pointer leans clearly into an open diagonal quadrant", () => {
+    const board = createBoard(4, 4);
+    placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));
+    placeUnit(board, createUnit({ id: "ally-2", team: "ally" }, 2, 2));
+
+    const candidate = getDiagonalSwapCandidate(
+      board,
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { x: 178, y: 178 },
+      64
     );
 
-    expect(preview).toEqual({ x: 300.8, y: 520 });
+    expect(candidate).toEqual({ x: 2, y: 2 });
   });
 
-  it("keeps a vertical block offset while following horizontal pointer movement", () => {
-    const preview = getBlockedPreviewWorld(
-      { x: 420, y: 120 },
-      { x: 256, y: 256 },
-      { x: 0, y: -1 },
-      128
+  it("blocks rough diagonal swap when both orthogonal gates are closed by terrain or enemies", () => {
+    const board = createBoard(4, 4);
+    placeUnit(board, createUnit({ id: "ally-1", team: "ally" }, 1, 1));
+    placeUnit(board, createUnit({ id: "ally-2", team: "ally" }, 2, 2));
+    placeUnit(board, createUnit({ id: "enemy-1", team: "enemy" }, 2, 1));
+    setWall(board, 1, 2);
+
+    const candidate = getDiagonalSwapCandidate(
+      board,
+      { x: 1, y: 1 },
+      { x: 160, y: 160 },
+      { x: 196, y: 196 },
+      64
     );
 
-    expect(preview).toEqual({ x: 420, y: 211.2 });
-  });
-
-  it("returns the pointer world when no blocked direction exists", () => {
-    const pointerWorld = { x: 111, y: 222 };
-
-    expect(getBlockedPreviewWorld(pointerWorld, { x: 256, y: 256 }, { x: 0, y: 0 }, 128)).toEqual(
-      pointerWorld
-    );
+    expect(candidate).toBeNull();
   });
 });
