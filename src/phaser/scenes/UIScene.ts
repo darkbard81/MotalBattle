@@ -6,6 +6,7 @@ import { DEFAULT_UI_STATE, UI_STATE_KEYS } from "../../game/uiState";
 export class UIScene extends Phaser.Scene {
   static readonly KEY = "UIScene";
   static readonly FLOW_ACTION_EVENT = "ui:flow-action";
+  static readonly DIALOGUE_ACTION_EVENT = "ui:dialogue-action";
   static readonly UNIT_DETAIL_CLOSE_EVENT = "ui:unit-detail-close";
   private scenarioTitleText?: Phaser.GameObjects.Text;
   private stageTitleText?: Phaser.GameObjects.Text;
@@ -22,6 +23,13 @@ export class UIScene extends Phaser.Scene {
   private dialogueSpeakerText?: Phaser.GameObjects.Text;
   private dialogueMessageText?: Phaser.GameObjects.Text;
   private dialogueHintText?: Phaser.GameObjects.Text;
+  private dialogueAdvanceZone?: Phaser.GameObjects.Rectangle;
+  private dialogueAdvanceButton?: Phaser.GameObjects.Container;
+  private dialogueSkipButton?: Phaser.GameObjects.Container;
+  private dialogueLogButton?: Phaser.GameObjects.Container;
+  private dialogueAutoPlayButton?: Phaser.GameObjects.Container;
+  private dialogueLogOverlay?: Phaser.GameObjects.Container;
+  private dialogueLogText?: Phaser.GameObjects.Text;
   private flowOverlay?: Phaser.GameObjects.Container;
   private flowTitleText?: Phaser.GameObjects.Text;
   private flowMessageText?: Phaser.GameObjects.Text;
@@ -124,6 +132,10 @@ export class UIScene extends Phaser.Scene {
     this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueHint}`, this.handleDialogueHint, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueBackgroundPath}`, this.handleDialogueBackgroundPath, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueStandingPath}`, this.handleDialogueStandingPath, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueLogVisible}`, this.handleDialogueLogVisible, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueLogText}`, this.handleDialogueLogText, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueLogButtonLabel}`, this.handleDialogueLogButtonLabel, this);
+    this.registry.events.on(`changedata-${UI_STATE_KEYS.dialogueAutoPlayButtonLabel}`, this.handleDialogueAutoPlayButtonLabel, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.scenarioTitle}`, this.handleScenarioTitle, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.stageTitle}`, this.handleStageTitle, this);
     this.registry.events.on(`changedata-${UI_STATE_KEYS.headerHint}`, this.handleHeaderHint, this);
@@ -149,6 +161,10 @@ export class UIScene extends Phaser.Scene {
     this.handleDialogueHint(this.registry, this.registry.get(UI_STATE_KEYS.dialogueHint));
     this.handleDialogueBackgroundPath(this.registry, this.registry.get(UI_STATE_KEYS.dialogueBackgroundPath));
     this.handleDialogueStandingPath(this.registry, this.registry.get(UI_STATE_KEYS.dialogueStandingPath));
+    this.handleDialogueLogVisible(this.registry, this.registry.get(UI_STATE_KEYS.dialogueLogVisible));
+    this.handleDialogueLogText(this.registry, this.registry.get(UI_STATE_KEYS.dialogueLogText));
+    this.handleDialogueLogButtonLabel(this.registry, this.registry.get(UI_STATE_KEYS.dialogueLogButtonLabel));
+    this.handleDialogueAutoPlayButtonLabel(this.registry, this.registry.get(UI_STATE_KEYS.dialogueAutoPlayButtonLabel));
     this.handleScenarioTitle(this.registry, this.registry.get(UI_STATE_KEYS.scenarioTitle));
     this.handleStageTitle(this.registry, this.registry.get(UI_STATE_KEYS.stageTitle));
     this.handleHeaderHint(this.registry, this.registry.get(UI_STATE_KEYS.headerHint));
@@ -177,6 +193,12 @@ export class UIScene extends Phaser.Scene {
 
     const panel = this.add.rectangle(centerX, panelY, panelWidth, panelHeight, 0x0f172a, 0.95);
     panel.setStrokeStyle(2, 0x334155, 1);
+
+    this.dialogueAdvanceZone = this.add.rectangle(centerX - 120, panelY, 700, 148, 0x000000, 0.001);
+    this.dialogueAdvanceZone.setInteractive({ useHandCursor: true });
+    this.dialogueAdvanceZone.on("pointerdown", () => {
+      this.game.events.emit(UIScene.DIALOGUE_ACTION_EVENT, "advance");
+    });
 
     this.dialogueStandingImage = this.add.image(panelX, centerY + 30, "__WHITE");
     this.dialogueStandingImage.setVisible(false);
@@ -211,16 +233,75 @@ export class UIScene extends Phaser.Scene {
       }
     ).setOrigin(1, 0);
 
+    this.dialogueAdvanceButton = this.createDialogueButton(centerX + 330, panelY + 0, "Next", "advance");
+    this.dialogueSkipButton = this.createDialogueButton(centerX + 330, panelY + 28, "Skip", "skip");
+    this.dialogueLogButton = this.createDialogueButton(centerX + 330, panelY + 56, "Show Log", "toggle-log");
+    this.dialogueAutoPlayButton = this.createDialogueButton(centerX + 330, panelY + 84, "Auto Off", "toggle-auto");
+
+    this.dialogueLogOverlay = this.add.container(0, 0).setVisible(false);
+    const logPanel = this.add.rectangle(centerX + 360, centerY - 80, 320, 360, 0x111827, 0.96);
+    logPanel.setStrokeStyle(2, 0x334155, 1);
+    const logTitle = this.add.text(centerX + 220, centerY - 248, "Dialogue Log", {
+      color: "#f8fafc",
+      fontFamily: "monospace",
+      fontSize: "15px"
+    });
+    this.dialogueLogText = this.add.text(centerX + 220, centerY - 220, "", {
+      color: "#cbd5e1",
+      fontFamily: "monospace",
+      fontSize: "12px",
+      lineSpacing: 6,
+      wordWrap: { width: 280 }
+    });
+    this.dialogueLogOverlay.add([logPanel, logTitle, this.dialogueLogText]);
+
     this.dialogueOverlay.add([
       this.dialogueBackground,
       this.dialogueBgImage,
       this.dialogueStandingImage,
       panel,
+      this.dialogueAdvanceZone,
       this.dialogueTitleText,
       this.dialogueSpeakerText,
       this.dialogueMessageText,
-      this.dialogueHintText
+      this.dialogueHintText,
+      this.dialogueAdvanceButton,
+      this.dialogueSkipButton,
+      this.dialogueLogButton,
+      this.dialogueAutoPlayButton,
+      this.dialogueLogOverlay
     ]);
+  }
+
+  private createDialogueButton(
+    x: number,
+    y: number,
+    labelText: string,
+    action: "advance" | "skip" | "toggle-log" | "toggle-auto"
+  ): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+    const bg = this.add.rectangle(0, 0, 110, 24, 0x1e293b, 0.98);
+    bg.setStrokeStyle(1, 0x475569, 1);
+    bg.setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, 0, labelText, {
+      color: "#f8fafc",
+      fontFamily: "monospace",
+      fontSize: "12px"
+    }).setOrigin(0.5);
+
+    bg.on("pointerdown", () => {
+      this.game.events.emit(UIScene.DIALOGUE_ACTION_EVENT, action);
+    });
+    bg.on("pointerover", () => {
+      bg.setFillStyle(0x334155, 1);
+    });
+    bg.on("pointerout", () => {
+      bg.setFillStyle(0x1e293b, 0.98);
+    });
+
+    container.add([bg, label]);
+    container.setData("label", label);
+    return container;
   }
 
   private createFlowOverlay(): void {
@@ -406,6 +487,24 @@ export class UIScene extends Phaser.Scene {
     this.setDynamicImageTexture(this.dialogueStandingImage, value, "dialog-standing");
   }
 
+  private handleDialogueLogVisible(_parent: unknown, value: boolean): void {
+    this.dialogueLogOverlay?.setVisible(!!value);
+  }
+
+  private handleDialogueLogText(_parent: unknown, value: string): void {
+    this.dialogueLogText?.setText(value ?? "");
+  }
+
+  private handleDialogueLogButtonLabel(_parent: unknown, value: string): void {
+    const label = this.dialogueLogButton?.getData("label") as Phaser.GameObjects.Text | undefined;
+    label?.setText(value ?? "Show Log");
+  }
+
+  private handleDialogueAutoPlayButtonLabel(_parent: unknown, value: string): void {
+    const label = this.dialogueAutoPlayButton?.getData("label") as Phaser.GameObjects.Text | undefined;
+    label?.setText(value ?? "Auto Off");
+  }
+
   private setDynamicImageTexture(
     image: Phaser.GameObjects.Image,
     assetPath: string,
@@ -494,6 +593,10 @@ export class UIScene extends Phaser.Scene {
     this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueHint}`, this.handleDialogueHint, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueBackgroundPath}`, this.handleDialogueBackgroundPath, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueStandingPath}`, this.handleDialogueStandingPath, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueLogVisible}`, this.handleDialogueLogVisible, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueLogText}`, this.handleDialogueLogText, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueLogButtonLabel}`, this.handleDialogueLogButtonLabel, this);
+    this.registry.events.off(`changedata-${UI_STATE_KEYS.dialogueAutoPlayButtonLabel}`, this.handleDialogueAutoPlayButtonLabel, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.scenarioTitle}`, this.handleScenarioTitle, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.stageTitle}`, this.handleStageTitle, this);
     this.registry.events.off(`changedata-${UI_STATE_KEYS.headerHint}`, this.handleHeaderHint, this);

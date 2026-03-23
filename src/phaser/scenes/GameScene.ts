@@ -32,6 +32,11 @@ import { UIScene } from "./UIScene";
 
 export class GameScene extends Phaser.Scene {
   static readonly KEY = "GameScene";
+  private static readonly BATTLE_ANIMATIONS_ENABLED = false;
+  private static readonly DIALOGUE_AUTO_PLAY_DELAY_MS = 1800;
+  private static readonly DIALOGUE_SKIP_STATUS = "Dialogue skipped to the end of this step.";
+  private static readonly DIALOGUE_AUTO_PLAY_STATUS = "Dialogue auto-play enabled.";
+  private static readonly DIALOGUE_AUTO_PLAY_STOPPED_STATUS = "Dialogue auto-play stopped.";
   private readonly unitCatalog: UnitCatalog = getDebugUnitCatalog();
   private readonly tileSize = 128;
   private scenarioDefinition!: ScenarioDefinition;
@@ -48,6 +53,9 @@ export class GameScene extends Phaser.Scene {
   private currentStage?: StageData;
   private currentDialog?: DialogData;
   private currentDialogIndex = 0;
+  private dialogueLogEntries: string[] = [];
+  private dialogueAutoPlayEnabled = false;
+  private dialogueAutoPlayTimer?: Phaser.Time.TimerEvent;
   private readonly objectiveManager = new ObjectiveManager();
   private currentTurn = 0;
   private currentObjectiveStatus: ObjectiveStatus = "ongoing";
@@ -81,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.bindDialogueAdvanceInput();
     this.game.events.on(UIScene.FLOW_ACTION_EVENT, this.handleFlowAction, this);
+    this.game.events.on(UIScene.DIALOGUE_ACTION_EVENT, this.handleDialogueAction, this);
     this.game.events.on(UIScene.UNIT_DETAIL_CLOSE_EVENT, this.hideUnitDetail, this);
 
     const startingStep = getStartingStep(this.scenarioDefinition.scenario);
@@ -91,7 +100,9 @@ export class GameScene extends Phaser.Scene {
     this.currentStep = step;
     this.currentDialog = undefined;
     this.currentDialogIndex = 0;
+    this.dialogueLogEntries = [];
     this.hideFlowPanel();
+    this.resetDialogueUiState();
     this.registry.set(UI_STATE_KEYS.selectedUnitId, "-");
     this.updateHeaderTimer(false, 0, 5000);
 
@@ -114,10 +125,11 @@ export class GameScene extends Phaser.Scene {
       this.registry.set(UI_STATE_KEYS.dialogueMessage, (step.lines ?? []).join("\n"));
       this.registry.set(UI_STATE_KEYS.dialogueBackgroundPath, "");
       this.registry.set(UI_STATE_KEYS.dialogueStandingPath, "");
+      this.appendDialogueLog(step.speaker ?? step.title, (step.lines ?? []).join(" "));
       return;
     }
 
-    this.registry.set(UI_STATE_KEYS.dialogueVisible, false);
+    this.resetDialogueUiState();
     const stage = getStageForScenarioStep(this.scenarioDefinition, step);
     if (!stage) {
       this.updateStatus(`Stage step ${step.id} is missing stage data.`);
@@ -176,6 +188,10 @@ export class GameScene extends Phaser.Scene {
       },
       onBlock: () => {},
       onBattleEvents: ({ playerBattleEvents, defeatedUnitIds, hazardTargetIds }) => {
+        if (!GameScene.BATTLE_ANIMATIONS_ENABLED) {
+          return;
+        }
+
         const allyBattleEvents = playerBattleEvents.filter((battleEvent) =>
           battleEvent.attackerIds.every((attackerId) => this.unitCatalog[attackerId]?.team === "ally")
         );
@@ -234,6 +250,10 @@ export class GameScene extends Phaser.Scene {
         this.updateHeaderTimer(active, remainingMs, totalMs);
       },
       onSwap: ({ swappedUnitId }) => {
+        if (!GameScene.BATTLE_ANIMATIONS_ENABLED) {
+          return;
+        }
+
         this.animationQueue.enqueue({
           type: "swap",
           key: `swap:${swappedUnitId}:${this.time.now}`,
@@ -272,18 +292,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private bindDialogueAdvanceInput(): void {
-    this.input.on("pointerdown", () => {
-      if (this.unitDetailVisible) {
-        this.hideUnitDetail();
-        return;
-      }
-
-      this.advanceDialogue();
-    });
     this.input.keyboard?.on("keydown-SPACE", () => {
+      this.stopDialogueAutoPlay(false);
       this.advanceDialogue();
     });
     this.input.keyboard?.on("keydown-ENTER", () => {
+      this.stopDialogueAutoPlay(false);
       this.advanceDialogue();
     });
   }
@@ -295,13 +309,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.currentDialogIndex = index;
+    const speaker = entry.speaker ?? entry.msg_type;
     this.registry.set(UI_STATE_KEYS.dialogueVisible, true);
     this.registry.set(UI_STATE_KEYS.dialogueTitle, dialog.title);
-    this.registry.set(UI_STATE_KEYS.dialogueSpeaker, entry.speaker ?? entry.msg_type);
+    this.registry.set(UI_STATE_KEYS.dialogueSpeaker, speaker);
     this.registry.set(UI_STATE_KEYS.dialogueMessage, entry.message);
-    this.registry.set(UI_STATE_KEYS.dialogueHint, "SPACE / ENTER / click");
+    this.registry.set(UI_STATE_KEYS.dialogueHint, "SPACE / ENTER / text panel tap / buttons");
     this.registry.set(UI_STATE_KEYS.dialogueBackgroundPath, entry.background);
     this.registry.set(UI_STATE_KEYS.dialogueStandingPath, entry.standing ?? "");
+    this.appendDialogueLog(speaker, entry.message);
+    this.scheduleDialogueAutoPlay();
     this.updateStatus(`Dialogue ${index + 1}/${dialog.steps.length}`);
   }
 
@@ -324,7 +341,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.pendingTransition = true;
-    this.registry.set(UI_STATE_KEYS.dialogueVisible, false);
+    this.resetDialogueUiState();
     const nextStep = getNextScenarioStep(this.scenarioDefinition.scenario, this.currentStep.id);
     this.pendingTransition = false;
 
@@ -352,9 +369,151 @@ export class GameScene extends Phaser.Scene {
     this.activeSwapAnimation = undefined;
     this.currentPreview = undefined;
     this.hideUnitDetail();
+    this.resetDialogueUiState();
     this.dyingUnitIds.clear();
     this.animationQueue.clear();
     this.boardInputLocked = false;
+  }
+
+  private handleDialogueAction(action: "advance" | "skip" | "toggle-log" | "toggle-auto"): void {
+    if (action === "toggle-auto") {
+      this.toggleDialogueAutoPlay();
+      return;
+    }
+
+    this.stopDialogueAutoPlay(false);
+
+    if (action === "advance") {
+      this.advanceDialogue();
+      return;
+    }
+
+    if (action === "skip") {
+      this.skipDialogueStep();
+      return;
+    }
+
+    this.toggleDialogueLog();
+  }
+
+  private skipDialogueStep(): void {
+    if (
+      !this.currentStep ||
+      this.currentStep.type !== "dialogue" ||
+      this.pendingTransition ||
+      this.registry.get(UI_STATE_KEYS.flowPanelVisible)
+    ) {
+      return;
+    }
+
+    if (this.currentDialog) {
+      for (let index = this.currentDialogIndex + 1; index < this.currentDialog.steps.length; index += 1) {
+        const entry = this.currentDialog.steps[index];
+        this.appendDialogueLog(entry.speaker ?? entry.msg_type, entry.message);
+      }
+    }
+
+    this.updateStatus(GameScene.DIALOGUE_SKIP_STATUS);
+    this.advanceDialogue();
+  }
+
+  private toggleDialogueLog(): void {
+    const nextVisible = !this.registry.get(UI_STATE_KEYS.dialogueLogVisible);
+    this.registry.set(UI_STATE_KEYS.dialogueLogVisible, nextVisible);
+    this.registry.set(
+      UI_STATE_KEYS.dialogueLogButtonLabel,
+      nextVisible ? "Hide Log" : "Show Log"
+    );
+  }
+
+  private toggleDialogueAutoPlay(): void {
+    if (
+      !this.currentStep ||
+      this.currentStep.type !== "dialogue" ||
+      this.pendingTransition ||
+      this.registry.get(UI_STATE_KEYS.flowPanelVisible)
+    ) {
+      return;
+    }
+
+    this.dialogueAutoPlayEnabled = !this.dialogueAutoPlayEnabled;
+    this.syncDialogueAutoPlayUi();
+    if (this.dialogueAutoPlayEnabled) {
+      this.updateStatus(GameScene.DIALOGUE_AUTO_PLAY_STATUS);
+      this.scheduleDialogueAutoPlay();
+      return;
+    }
+
+    this.clearDialogueAutoPlayTimer();
+    this.updateStatus(GameScene.DIALOGUE_AUTO_PLAY_STOPPED_STATUS);
+  }
+
+  private scheduleDialogueAutoPlay(): void {
+    this.clearDialogueAutoPlayTimer();
+    if (
+      !this.dialogueAutoPlayEnabled ||
+      !this.currentStep ||
+      this.currentStep.type !== "dialogue" ||
+      this.pendingTransition ||
+      this.registry.get(UI_STATE_KEYS.flowPanelVisible)
+    ) {
+      return;
+    }
+
+    this.dialogueAutoPlayTimer = this.time.delayedCall(
+      GameScene.DIALOGUE_AUTO_PLAY_DELAY_MS,
+      () => {
+        this.dialogueAutoPlayTimer = undefined;
+        if (!this.dialogueAutoPlayEnabled) {
+          return;
+        }
+
+        this.advanceDialogue();
+      }
+    );
+  }
+
+  private stopDialogueAutoPlay(emitStatus: boolean): void {
+    if (!this.dialogueAutoPlayEnabled) {
+      this.clearDialogueAutoPlayTimer();
+      return;
+    }
+
+    this.dialogueAutoPlayEnabled = false;
+    this.clearDialogueAutoPlayTimer();
+    this.syncDialogueAutoPlayUi();
+    if (emitStatus) {
+      this.updateStatus(GameScene.DIALOGUE_AUTO_PLAY_STOPPED_STATUS);
+    }
+  }
+
+  private clearDialogueAutoPlayTimer(): void {
+    this.dialogueAutoPlayTimer?.remove(false);
+    this.dialogueAutoPlayTimer = undefined;
+  }
+
+  private syncDialogueAutoPlayUi(): void {
+    this.registry.set(UI_STATE_KEYS.dialogueAutoPlayActive, this.dialogueAutoPlayEnabled);
+    this.registry.set(
+      UI_STATE_KEYS.dialogueAutoPlayButtonLabel,
+      this.dialogueAutoPlayEnabled ? "Auto On" : "Auto Off"
+    );
+  }
+
+  private appendDialogueLog(speaker: string, message: string): void {
+    this.dialogueLogEntries.push(`${speaker}: ${message}`);
+    this.registry.set(UI_STATE_KEYS.dialogueLogText, this.dialogueLogEntries.join("\n\n"));
+  }
+
+  private resetDialogueUiState(): void {
+    this.dialogueAutoPlayEnabled = false;
+    this.clearDialogueAutoPlayTimer();
+    this.registry.set(UI_STATE_KEYS.dialogueVisible, false);
+    this.registry.set(UI_STATE_KEYS.dialogueLogVisible, false);
+    this.registry.set(UI_STATE_KEYS.dialogueLogText, "");
+    this.registry.set(UI_STATE_KEYS.dialogueLogButtonLabel, "Show Log");
+    this.registry.set(UI_STATE_KEYS.dialogueAutoPlayActive, false);
+    this.registry.set(UI_STATE_KEYS.dialogueAutoPlayButtonLabel, "Auto Off");
   }
 
   private showUnitDetail(unitId: string): void {
@@ -751,6 +910,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.clearDialogueAutoPlayTimer();
     this.game.events.off(UIScene.FLOW_ACTION_EVENT, this.handleFlowAction, this);
+    this.game.events.off(UIScene.DIALOGUE_ACTION_EVENT, this.handleDialogueAction, this);
   }
 }
