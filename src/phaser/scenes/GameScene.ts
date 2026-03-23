@@ -38,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private board?: Board;
   private readonly unitViews = new Map<string, UnitView>();
   private readonly animationQueue = new AnimationQueue(this);
+  private boardInputLocked = false;
   private selectedUnitId: string | null = null;
   private boardView?: BoardView;
   private dragController?: DragController;
@@ -71,6 +72,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.animationQueue.setBusyChangeListener((busy) => {
+      this.boardInputLocked = busy;
+    });
     this.registry.set(
       UI_STATE_KEYS.scenarioTitle,
       `Scenario: ${this.scenarioDefinition.scenario.title}`
@@ -149,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.dragController = new DragController(this, this.board, this.boardView, {
+      isInputBlocked: () => this.boardInputLocked,
       onSelectionChange: (unitId) => {
         this.selectedUnitId = unitId;
         this.registry.set(UI_STATE_KEYS.selectedUnitId, unitId ?? "-");
@@ -349,6 +354,7 @@ export class GameScene extends Phaser.Scene {
     this.hideUnitDetail();
     this.dyingUnitIds.clear();
     this.animationQueue.clear();
+    this.boardInputLocked = false;
   }
 
   private showUnitDetail(unitId: string): void {

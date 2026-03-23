@@ -47,8 +47,13 @@ export type AnimationCommand =
 export class AnimationQueue {
   private queue: AnimationCommand[] = [];
   private isRunning = false;
+  private onBusyChange?: (busy: boolean) => void;
 
   constructor(private readonly scene: Phaser.Scene) {}
+
+  setBusyChangeListener(listener: ((busy: boolean) => void) | undefined): void {
+    this.onBusyChange = listener;
+  }
 
   enqueue(command: AnimationCommand): void {
     this.queue.push(command);
@@ -57,7 +62,10 @@ export class AnimationQueue {
 
   clear(): void {
     this.queue = [];
-    this.isRunning = false;
+    if (this.isRunning) {
+      this.isRunning = false;
+      this.onBusyChange?.(false);
+    }
   }
 
   private flush(): void {
@@ -70,7 +78,11 @@ export class AnimationQueue {
       return;
     }
 
+    const wasRunning = this.isRunning;
     this.isRunning = true;
+    if (!wasRunning) {
+      this.onBusyChange?.(true);
+    }
     command.run();
 
     const durationMap: Record<AnimationCommand["type"], number> = {
@@ -84,8 +96,14 @@ export class AnimationQueue {
     };
     const duration = command.duration ?? durationMap[command.type];
     this.scene.time.delayedCall(duration, () => {
+      if (this.queue.length > 0) {
+        this.isRunning = false;
+        this.flush();
+        return;
+      }
+
       this.isRunning = false;
-      this.flush();
+      this.onBusyChange?.(false);
     });
   }
 }

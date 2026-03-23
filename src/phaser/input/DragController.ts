@@ -26,6 +26,7 @@ import {
 } from "./dragPreview";
 
 interface DragControllerCallbacks {
+  isInputBlocked: () => boolean;
   onSelectionChange: (unitId: string | null) => void;
   onInspect: (payload: { unitId: string }) => void;
   onStatus: (message: string) => void;
@@ -121,6 +122,10 @@ export class DragController {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    if (this.callbacks.isInputBlocked()) {
+      return;
+    }
+
     const cell = this.boardView.worldToGrid(pointer.worldX, pointer.worldY);
     if (!cell) {
       return;
@@ -150,9 +155,18 @@ export class DragController {
     });
     this.callbacks.onStatus(
       unit.team === "ally"
-        ? `Selected ${unit.id}. Drag to start the 5 second move timer or hold 1.5 seconds for details.`
+        ? `Selected ${unit.id}. You have 5 seconds to drag.`
         : `Selected ${unit.id}. Hold 1.5 seconds for details.`
     );
+    if (unit.team === "ally") {
+      this.startDrag(unit.id, cell);
+      return;
+    }
+
+    if (unit.team !== "enemy") {
+      return;
+    }
+
     this.holdTimer = this.scene.time.delayedCall(DragController.HOLD_TO_INSPECT_MS, () => {
       if (!this.selectedUnitId || this.selectedUnitId !== unit.id || !this.pressedCell) {
         return;
@@ -164,6 +178,10 @@ export class DragController {
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
+    if (this.callbacks.isInputBlocked()) {
+      return;
+    }
+
     if (!pointer.isDown || !this.selectedUnitId) {
       return;
     }
@@ -298,6 +316,10 @@ export class DragController {
   }
 
   private handlePointerUp(): void {
+    if (this.callbacks.isInputBlocked()) {
+      return;
+    }
+
     this.holdTimer?.remove(false);
     this.holdTimer = undefined;
 
