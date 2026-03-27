@@ -1,52 +1,27 @@
 import Phaser from "phaser";
+import { ANIMATION_POLICY } from "./animationPolicy";
+
+type BaseAnimationCommand = {
+  key: string;
+  duration?: number;
+  run: () => void;
+  priority?: number;
+  blocksBoardInput?: boolean;
+};
 
 export type AnimationCommand =
-  | {
-      type: "assist";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "swap";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "block";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "flash";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "hit";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "die";
-      key: string;
-      duration?: number;
-      run: () => void;
-    }
-  | {
-      type: "noop";
-      key: string;
-      duration?: number;
-      run: () => void;
-    };
+  | ({ type: "assist" } & BaseAnimationCommand)
+  | ({ type: "swap" } & BaseAnimationCommand)
+  | ({ type: "block" } & BaseAnimationCommand)
+  | ({ type: "flash" } & BaseAnimationCommand)
+  | ({ type: "hit" } & BaseAnimationCommand)
+  | ({ type: "die" } & BaseAnimationCommand)
+  | ({ type: "noop" } & BaseAnimationCommand);
 
 export class AnimationQueue {
   private queue: AnimationCommand[] = [];
   private isRunning = false;
+  private currentCommand?: AnimationCommand;
   private onBusyChange?: (busy: boolean) => void;
 
   constructor(private readonly scene: Phaser.Scene) {}
@@ -56,16 +31,46 @@ export class AnimationQueue {
   }
 
   enqueue(command: AnimationCommand): void {
-    this.queue.push(command);
+    this.insertByPriority(command);
     this.flush();
   }
 
   clear(): void {
     this.queue = [];
-    if (this.isRunning) {
-      this.isRunning = false;
-      this.onBusyChange?.(false);
+    this.isRunning = false;
+    this.currentCommand = undefined;
+    this.onBusyChange?.(false);
+  }
+
+  private insertByPriority(command: AnimationCommand): void {
+    const commandPriority = this.resolvePriority(command);
+    const insertAt = this.queue.findIndex(
+      (queuedCommand) => commandPriority > this.resolvePriority(queuedCommand)
+    );
+
+    if (insertAt < 0) {
+      this.queue.push(command);
+      return;
     }
+
+    this.queue.splice(insertAt, 0, command);
+  }
+
+  private resolvePriority(command: AnimationCommand): number {
+    return command.priority ?? ANIMATION_POLICY[command.type].priority;
+  }
+
+  private resolveDuration(command: AnimationCommand): number {
+    return command.duration ?? ANIMATION_POLICY[command.type].durationMs;
+  }
+
+  private resolveBlocksBoardInput(command: AnimationCommand): boolean {
+    return command.blocksBoardInput ?? ANIMATION_POLICY[command.type].blocksBoardInput;
+  }
+
+  private emitBusyState(): void {
+    const busy = this.currentCommand ? this.resolveBlocksBoardInput(this.currentCommand) : false;
+    this.onBusyChange?.(busy);
   }
 
   private flush(): void {
@@ -75,35 +80,21 @@ export class AnimationQueue {
 
     const command = this.queue.shift();
     if (!command) {
+      this.currentCommand = undefined;
+      this.emitBusyState();
       return;
     }
 
-    const wasRunning = this.isRunning;
     this.isRunning = true;
-    if (!wasRunning) {
-      this.onBusyChange?.(true);
-    }
+    this.currentCommand = command;
+    this.emitBusyState();
     command.run();
 
-    const durationMap: Record<AnimationCommand["type"], number> = {
-      assist: 1000,
-      swap: 180,
-      block: 100,
-      flash: 120,
-      hit: 180,
-      die: 220,
-      noop: 0
-    };
-    const duration = command.duration ?? durationMap[command.type];
+    const duration = this.resolveDuration(command);
     this.scene.time.delayedCall(duration, () => {
-      if (this.queue.length > 0) {
-        this.isRunning = false;
-        this.flush();
-        return;
-      }
-
       this.isRunning = false;
-      this.onBusyChange?.(false);
+      this.currentCommand = undefined;
+      this.flush();
     });
   }
 }
