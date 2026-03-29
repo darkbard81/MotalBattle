@@ -18,6 +18,9 @@
   - Phase C-2 설계 문서(`docs/PHASE_C2_COMBAT_ANIMATION_REDESIGN.md`)에 트리거 인덱스, 재활성화 단계, 수용 기준 초안을 정리했다.
 
 ## 2. Completed
+- 개발 보조 tooling 정리 완료
+  - `AGENTS.md`에 `codex_mini` MCP 서버를 tool 중심 서버로 사용하는 규칙 추가
+  - `scripts/codex_mini_mcp.sh` 래퍼 스크립트 추가
 - 프로젝트 기반(Phaser + Vite + TypeScript) 및 기본 Scene 구조 구축 완료
   - `BootScene`, `PreloadScene`, `TitleScene`, `GameScene`, `UIScene` 동작
 - 코어 보드/유닛/규칙 레이어 구축 완료
