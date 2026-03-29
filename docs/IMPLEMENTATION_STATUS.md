@@ -16,6 +16,9 @@
   - 드래그 입력은 포인터 좌표와 플로팅 타일 위치를 분리해 처리하며, 플로팅 타일은 합법 경로를 한 칸씩만 따라간다. `block` 시에는 막힌 축만 잠그고, 해제는 막힌 타일 경계선 기준으로 즉시 판정한다.
 
 ## 2. Completed
+- 개발 보조 tooling 정리 완료
+  - `AGENTS.md`에 `codex_mini` MCP 서버를 tool 중심 서버로 사용하는 규칙 추가
+  - `scripts/codex_mini_mcp.sh` 래퍼 스크립트 추가
 - 프로젝트 기반(Phaser + Vite + TypeScript) 및 기본 Scene 구조 구축 완료
   - `BootScene`, `PreloadScene`, `TitleScene`, `GameScene`, `UIScene` 동작
 - 코어 보드/유닛/규칙 레이어 구축 완료

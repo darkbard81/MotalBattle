@@ -1,14 +1,4 @@
-1. 로컬 명령 실행 규칙
-- Flatpak VS Code 환경에서는 기본 `PATH`에 Node.js/NPM 경로가 없을 수 있음
-- npm 스크립트 실행 시 아래 형식을 우선 사용
-  - `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run <script>`
-- 개별 바이너리 실행 시 아래 경로를 사용 가능
-  - `/home/deck/.nvm/versions/node/v20.19.5/bin/node`
-  - `/home/deck/.nvm/versions/node/v20.19.5/bin/npm`
-- `PATH`를 설정할 때는 Node 경로를 앞에 추가하고, 기존 시스템 `PATH`는 뒤에 유지
-- 이 저장소에서 Node.js 관련 명령을 실행할 때는 위 규칙을 기본값으로 참조
-
-2. 구현 현황 문서 관리 규칙
+1. 구현 현황 문서 관리 규칙
 - 구현 현황의 최종 기준 문서는 `docs/IMPLEMENTATION_STATUS.md` 이다
 - 구현 작업을 수행한 뒤에는 반드시 `docs/IMPLEMENTATION_STATUS.md`를 현재 기준으로 갱신한다
 - `RoadMap.md`는 계획 문서로 유지하고, 실제 구현 완료/진행/미시작 상태는 `docs/IMPLEMENTATION_STATUS.md`에 기록한다
@@ -30,7 +20,7 @@
   - Open Questions
   - Next Action
 
-3. 작업 계획 문서 관리 규칙
+2. 작업 계획 문서 관리 규칙
 - `RoadMap.md`는 장기 계획 문서다. 단계 순서, 핵심 방향, 중장기 우선순위의 기준으로 유지한다.
 - `Phase_Plan_dev.md`와 같은 작업 단위 계획 문서는 특정 구현 단위의 실행 계획 문서다.
 - 작업 단위 계획 문서는 `RoadMap.md`를 대체하지 않으며, 장기 계획의 하위 실행 문서로만 사용한다.
@@ -39,14 +29,20 @@
 - 작업 단위 계획 문서가 로드맵과 다른 방향을 제안할 경우, 차이와 이유를 명시하고 사용자 확인 없이 확정하지 않는다.
 - 작업 단위 계획 문서는 구현 전후 맥락을 남기기 위한 보조 문서이며, 완료 상태 관리나 진행률의 최종 기준으로 사용하지 않는다.
 
-4. Current Phase / 검증 기록 규칙
+3. Current Phase / 검증 기록 규칙
 - `Current Phase`는 마지막으로 실제 구현 완료된 로드맵 세부 항목 기준으로 갱신한다.
 - 둘 이상의 세부 항목이 한 번에 걸친 경우에는 “주 구현 완료 기준”이 되는 가장 뒤 단계로 올린다.
 - 단순 탐색, 문서 초안 작성, 계획만 수행한 경우에는 `Current Phase`를 올리지 않는다.
 - 테스트/빌드 결과를 `docs/IMPLEMENTATION_STATUS.md`에 기록할 때는 최신 통과 결과만 남기고, 가능하면 사용한 명령도 함께 간단히 적는다.
 - 구현으로 동작, 테스트 결과, 단계 상태가 바뀐 경우에만 `docs/IMPLEMENTATION_STATUS.md`를 갱신한다.
 
-5. 로드맵 이탈 판단 규칙
+4. 로드맵 이탈 판단 규칙
 - 사용자 확인이 필요한 “로드맵 이탈”은 핵심 컨셉 변경, 단계 순서 변경, 우선순위 변경, 범위 확장에 한정한다.
 - 문구 정리, UI 표현 정리, 예외 처리 보강, 테스트 보강, 내부 리팩터링처럼 핵심 방향을 바꾸지 않는 세부 구현은 사용자 확인 없이 진행할 수 있다.
 - `Next Action`은 기본적으로 1~3개를 유지하되, 서로 독립적으로 병렬 진행 가능한 실제 구현 단위가 명확할 때만 최대 4개까지 허용한다.
+
+5. `codex_mini` MCP 서버 사용 규칙
+- `codex_mini`는 resource 중심 서버가 아니라 tool 중심 서버로 취급한다.
+- `list_mcp_resources` / `list_mcp_resource_templates`로 확인하려고 하지 말고, 필요 시 stdio JSON-RPC로 직접 `initialize` 후 `tools/list`, `tools/call`을 사용한다.
+- 기본 실행 명령은 `flatpak-spawn --host podman exec -i -w /workspace codex-box codex mcp-server` 이다.
+- 반복 호출이 필요하면 프로젝트 루트의 `scripts/codex_mini_mcp.sh` 래퍼를 우선 사용한다.
