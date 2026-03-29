@@ -2,7 +2,7 @@
 
 ## 1. Current Phase
 - 현재 단계: **Phase C-1 (대화 UI 품질 개선)**
-- 기준 날짜: **2026-03-23**
+- 기준 날짜: **2026-03-27**
 - 요약:
   - 코어 규칙(이동/밀림/전투/하자드), 드래그 상호작용, 최소 적 AI, 데이터 로더/스키마 검증, 다중 스테이지+대화 기본 루프가 동작한다.
   - objective 판정은 `defeat_all`, `survive_n_turns`, `reach_cell`, `protect_unit`를 지원하고, stage 결과에 따라 `onSuccess` / `onFail` 분기 전이가 가능하다.
@@ -14,6 +14,8 @@
   - 전투 보드에서 아군 드래그 타이머는 타일 선택 즉시 켜지고, 적군 타일만 1.5초 롱프레스로 유닛 상세 오버레이를 열 수 있다.
   - 전투 연출 애니메이션은 현재 버그/타이밍 재정립 이슈로 비활성화되어 있고, 대상 목록만 유지한다.
   - 드래그 입력은 포인터 좌표와 플로팅 타일 위치를 분리해 처리하며, 플로팅 타일은 합법 경로를 한 칸씩만 따라간다. `block` 시에는 막힌 축만 잠그고, 해제는 막힌 타일 경계선 기준으로 즉시 판정한다.
+  - Phase C-2 1차 착수로 전투 연출 정책 상수(`duration/priority/board input lock`)를 분리하고, AnimationQueue에 우선순위 삽입 및 타입별 입력 잠금 처리를 반영했다.
+  - Phase C-2 설계 문서(`docs/PHASE_C2_COMBAT_ANIMATION_REDESIGN.md`)에 트리거 인덱스, 재활성화 단계, 수용 기준 초안을 정리했다.
 
 ## 2. Completed
 - 개발 보조 tooling 정리 완료
@@ -79,16 +81,19 @@
   - 버튼 클릭과 진행 클릭의 입력 충돌을 줄이기 위해 dialogue 전용 포인터 경로로 정리
   - 안내 문구를 현재 입력 규칙(`SPACE / ENTER / text panel tap / buttons`)에 맞게 갱신
 - 검증 상태 (최신 기준)
-  - 단위 테스트: **63 passed**
+  - 단위 테스트: **65 passed**
   - 테스트 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run test`
   - 빌드: **성공**
   - 빌드 명령: `env PATH=/home/deck/.nvm/versions/node/v20.19.5/bin:$PATH npm run build`
 
 ## 3. In Progress
-- Phase C-2 잔여 작업: swap / sandwich / 피격 / 사망 연출의 우선순위와 타이밍 큐 정리
+- Phase C-2 전투 연출 재정립 1차 진행 중
+  - `AnimationQueue` 우선순위 기반 삽입(대기 큐) 적용
+  - 타입별 입력 잠금 정책(`die/assist/hit` 잠금, `swap/flash/block` 비잠금) 적용
+  - 재활성화 전용 설계 문서 초안(`docs/PHASE_C2_COMBAT_ANIMATION_REDESIGN.md`) 작성
 
 ## 4. Not Started
-- 대화 UI 고도화(로그/스킵/자동재생 등)
+- 대화 UI 고도화(타이핑 연출/모바일 세부 UX)
 - 화면/해상도 품질 재점검
 - 콘텐츠 제작 파이프라인(템플릿/밸런싱 루프)
 - 스킬 시스템(행동 타입/쿨다운/효과 규칙)
@@ -126,11 +131,11 @@
 - 대화 문장은 타이핑 연출 없이 즉시 전체 표시한다.
 
 ## 6. Open Questions
-- 로드맵 순서상 다음 기본 복귀 지점을 `Phase C-1` 대화 UI로 둘지, 사용자 요청 기반으로 `Phase C-2` 세부 보강을 더 이어갈지
-- 대화 UI 고도화를 Phase C-1에서 어디까지 MVP 범위로 둘지
-- `stage-reach-cell`을 실제 debug scenario 흐름에 연결할지, 별도 테스트/샘플 자산으로 유지할지
+- `assist` 연출(현재 1000ms)의 체감 지연을 줄이기 위해 기본 지속시간을 700~850ms로 낮출지 여부
+- hazard 피드백을 `flash` 공용 처리로 유지할지, hazard 전용 타입으로 분리할지 여부
+- 전투 연출 재활성화를 바로 기본값으로 열지, feature flag 단계 적용 후 열지 여부
 
 ## 7. Next Action
-1. **`Phase C-2` 전투 연출 재정립 설계** (`swap`, `assist`, `hit`, `flash`, `die` 지속시간과 큐 우선순위를 다시 정의하고 재활성화 기준 정리)
-2. **화면/해상도 품질 재점검 준비** (`Phase C-3` 진입 전 현재 대화/전투 UI 앵커와 패널 폭을 2560x1440 기준으로 점검)
-3. **대화 UI 문구/힌트 최종 정리** (타이핑 연출 미적용 기준으로 버튼 라벨, 진행 안내, 상태 메시지 문구를 정리)
+1. **`Phase C-2` 전투 연출 재활성화 1차 검증** (`BATTLE_ANIMATIONS_ENABLED` 로컬 활성화 후 단일 hit / assist / hazard+die 연쇄 시나리오를 순회 점검)
+2. **`assist`/`hit` 체감 시간 튜닝** (정책 기본값 유지 여부를 플레이 체감 기준으로 확정하고 필요 시 수치 조정)
+3. **`Phase C-3` 화면/해상도 점검 준비** (전투/대화 UI 앵커와 패널 폭을 2560x1440 기준으로 점검 목록화)
